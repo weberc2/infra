@@ -1,5 +1,5 @@
 locals {
-  account_alias = "weberc2"
+   account_alias = "weberc2"
 }
 
 resource "aws_s3_bucket" "state" {
