@@ -1,0 +1,22 @@
+name: Merge
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform init bootstrap
+        id: init-bootstrap
+        run: cd ./targets/bootstrap && terraform init
+      - name: Terraform apply bootstrap
+        id: apply-bootstrap
+        run: cd ./targets/bootstrap && terraform apply -auto-approve
+
+
