@@ -14,6 +14,9 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       - name: Terraform init bootstrap
         id: init-bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=./targets/bootstrap init
       - name: Terraform apply bootstrap
         id: apply-bootstrap
