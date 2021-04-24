@@ -209,11 +209,11 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - name: Run script
-        run: go run scripts/template.go
+        run: go run scripts/generate-workflows.go
       - name: Check diff
         run: |
           if [[ -n "$(git diff .github/workflows)" ]]; then
-            echo "Run ./scripts/template.go from the repo root and commit the results."
+            echo "Run ./scripts/generate-workflows.go from the repo root and commit the results."
             exit 1
           fi
 `,
