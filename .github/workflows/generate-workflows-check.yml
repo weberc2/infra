@@ -1,0 +1,20 @@
+name: Generate workflows check
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  generate-workflows-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Run script
+        run: go run scripts/generate-workflows.go
+      - name: Check diff
+        run: |
+          if [[ -n "$(git diff .github/workflows)" ]]; then
+            echo "Run ./scripts/generate-workflows.go from the repo root and commit the results."
+            exit 1
+          fi
