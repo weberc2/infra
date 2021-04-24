@@ -1,5 +1,4 @@
-name: Remote State Test plan
-
+name: remote-state-test plan
 on:
   pull_request:
     branches: [ master ]
