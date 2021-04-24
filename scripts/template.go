@@ -48,16 +48,19 @@ func main() {
 	}
 
 	for fileName, contents := range staticFiles {
-		filePath := filepath.Join(dir, fileName)
-		file, err := os.Create(filePath)
-		if err != nil {
-			log.Fatalf("Creating static file '%s': %v", filePath, err)
-		}
-		defer file.Close()
+		log.Printf("INFO Generating file %s", fileName)
+		filePath := filepath.Join(tmpDir, fileName)
+		func() {
+			file, err := os.Create(filePath)
+			if err != nil {
+				log.Fatalf("Creating static file '%s': %v", filePath, err)
+			}
+			defer file.Close()
 
-		if _, err := file.WriteString(contents); err != nil {
-			log.Fatalf("Writing to static file '%s': %v", filePath, err)
-		}
+			if _, err := file.WriteString(contents); err != nil {
+				log.Fatalf("Writing to static file '%s': %v", filePath, err)
+			}
+		}()
 	}
 
 	if err := os.Rename(tmpDir, dir); err != nil {
