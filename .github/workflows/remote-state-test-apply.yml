@@ -1,4 +1,4 @@
-name: remote-state-test Test
+name: Terraform apply - target/remote-state-test
 on:
   push:
     branches: [ master ]

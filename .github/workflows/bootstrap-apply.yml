@@ -1,4 +1,4 @@
-name: bootstrap Test
+name: Terraform apply - target/bootstrap
 on:
   push:
     branches: [ master ]

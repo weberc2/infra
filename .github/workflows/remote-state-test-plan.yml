@@ -1,4 +1,4 @@
-name: remote-state-test plan
+name: Terraform plan - target/remote-state-test
 on:
   pull_request:
     branches: [ master ]

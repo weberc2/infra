@@ -1,4 +1,4 @@
-name: bootstrap plan
+name: Terraform plan - target/bootstrap
 on:
   pull_request:
     branches: [ master ]

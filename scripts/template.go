@@ -122,7 +122,7 @@ func applyTemplate(dir string, target string, templateName string, template *tem
 var templates = map[string]*template.Template{
 	"${target}-plan.yml": template.Must(
 		template.New("plan").Parse(
-			`name: {{ .Target }} plan
+			`name: Terraform plan - target/{{ .Target }}
 on:
   pull_request:
     branches: [ master ]
@@ -149,7 +149,7 @@ jobs:
 	),
 	"${target}-apply.yml": template.Must(
 		template.New("plan").Parse(
-			`name: {{ .Target }} Test
+			`name: Terraform apply - target/{{ .Target }}
 on:
   push:
     branches: [ master ]
@@ -211,6 +211,10 @@ jobs:
       - name: Run script
         run: go run scripts/template.go
       - name: Check diff
-        run: if [[ -n "$(git diff .github/workflows)" ]]; then exit 1; fi
+        run: |
+		  if [[ -n "$(git diff .github/workflows)" ]]; then
+		    echo "Run ./scripts/template.go from the repo root and commit the results."
+		  	exit 1
+		  fi
 `,
 }
