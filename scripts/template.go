@@ -146,7 +146,7 @@ jobs:
 	),
 	"${target}-apply.yml": template.Must(
 		template.New("plan").Parse(
-			`name: Merge Remote State Test
+			`name: {{ .Target }} Test
 on:
   push:
     branches: [ master ]

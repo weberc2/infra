@@ -1,4 +1,4 @@
-name: Merge Remote State Test
+name: remote-state-test Test
 on:
   push:
     branches: [ master ]
