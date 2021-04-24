@@ -14,8 +14,6 @@ resource "aws_s3_bucket" "state" {
   }
 }
 
-resource "aws_dynamodb_table" "bad-lock" {}
-
 resource "aws_dynamodb_table" "lock" {
   name           = "TerraformStateLock"
   hash_key       = "LockID"
