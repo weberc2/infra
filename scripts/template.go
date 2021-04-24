@@ -212,9 +212,9 @@ jobs:
         run: go run scripts/template.go
       - name: Check diff
         run: |
-		  if [[ -n "$(git diff .github/workflows)" ]]; then
-		    echo "Run ./scripts/template.go from the repo root and commit the results."
-		  	exit 1
-		  fi
+		    if [[ -n "$(git diff .github/workflows)" ]]; then
+		      echo "Run ./scripts/template.go from the repo root and commit the results."
+		    	exit 1
+		    fi
 `,
 }
