@@ -193,4 +193,21 @@ jobs:
       - name: Terraform format check
         run: terraform fmt -recursive -check
 `,
+	"generate-workflows-check.yml": `name: Generate workflows check
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  generate-workflows-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Run script
+        run: go run scripts/template.go
+      - name: Check diff
+        run: if [[ -n "$(git diff)" ]]; then exit 1; fi
+`,
 }
