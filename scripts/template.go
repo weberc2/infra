@@ -211,6 +211,6 @@ jobs:
       - name: Run script
         run: go run scripts/template.go
       - name: Check diff
-        run: if [[ -n "$(git diff)" ]]; then exit 1; fi
+        run: if [[ -n "$(git diff .github/workflows)" ]]; then exit 1; fi
 `,
 }
