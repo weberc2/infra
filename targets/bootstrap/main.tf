@@ -32,36 +32,7 @@ resource "aws_iam_user" "terraform" {
   path = "/system/"
 }
 
-resource "aws_iam_user_policy" "manage_state" {
-  name = "manage-terraform-state"
-  user = aws_iam_user.terraform.name
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:ListBucket"
-        ],
-        Effect   = "Allow",
-        Resource = "arn:aws:s3:::${aws_s3_bucket.state.bucket}"
-      },
-      {
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject"
-        ],
-        Effect   = "Allow",
-        Resource = "arn:aws:s3:::${aws_s3_bucket.state.bucket}/*"
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
-        ],
-        Resource = aws_dynamodb_table.lock.arn
-      }
-    ]
-  })
+resource "aws_iam_user_policy_attachment" "admin" {
+  user       = aws_iam_user.terraform.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
