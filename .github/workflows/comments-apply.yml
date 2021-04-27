@@ -1,4 +1,4 @@
-name: Terraform apply - target/targets/remote-state-test
+name: Terraform apply - target/comments
 on:
   push:
     branches: [ master ]
@@ -11,15 +11,15 @@ jobs:
         uses: actions/checkout@v2
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
-      - name: Terraform init targets/remote-state-test
-        id: init-targets/remote-state-test
+      - name: Terraform init comments
+        id: init-comments
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/remote-state-test init
-      - name: Terraform apply targets/remote-state-test
-        id: apply-targets/remote-state-test
+        run: terraform -chdir=./targets/comments init
+      - name: Terraform apply comments
+        id: apply-comments
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/remote-state-test apply -auto-approve
+        run: terraform -chdir=./targets/comments apply -auto-approve

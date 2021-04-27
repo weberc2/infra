@@ -1,22 +1,25 @@
-name: Terraform plan - target/targets/remote-state-test
+name: Terraform apply - target/bootstrap
 on:
-  pull_request:
+  push:
     branches: [ master ]
 
 jobs:
-  targets/remote-state-test-plan-check:
+  apply:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
-      - name: Terraform init
+      - name: Terraform init bootstrap
+        id: init-bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/remote-state-test init
-      - name: Terraform plan
+        run: terraform -chdir=./targets/bootstrap init
+      - name: Terraform apply bootstrap
+        id: apply-bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/remote-state-test plan
+        run: terraform -chdir=./targets/bootstrap apply -auto-approve

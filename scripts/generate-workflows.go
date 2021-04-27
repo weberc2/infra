@@ -26,13 +26,13 @@ func main() {
 		log.Fatalf("Finding targets: %v", err)
 	}
 
-	// for i := range targets {
-	// 	t, err := filepath.Rel("./targets", targets[i])
-	// 	if err != nil {
-	// 		log.Fatalf("Finding relative path of '%s': %v", targets[i], err)
-	// 	}
-	// 	targets[i] = t
-	// }
+	for i := range targets {
+		t, err := filepath.Rel("./targets", targets[i])
+		if err != nil {
+			log.Fatalf("Finding relative path of '%s': %v", targets[i], err)
+		}
+		targets[i] = t
+	}
 
 	for _, target := range targets {
 		for templateName, template := range templates {
@@ -213,6 +213,9 @@ jobs:
       - name: Check diff
         run: |
           if [[ -n "$(git diff .github/workflows)" ]]; then
+			echo "Unexpected differences in the .github/workflows directory:"
+			git diff .github/workflows
+			echo ""
             echo "Run ./scripts/generate-workflows.go from the repo root and commit the results."
             exit 1
           fi

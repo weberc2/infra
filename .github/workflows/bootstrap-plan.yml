@@ -1,25 +1,22 @@
-name: Terraform apply - target/targets/comments
+name: Terraform plan - target/bootstrap
 on:
-  push:
+  pull_request:
     branches: [ master ]
 
 jobs:
-  apply:
+  bootstrap-plan-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
-      - name: Terraform init targets/comments
-        id: init-targets/comments
+      - name: Terraform init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/comments init
-      - name: Terraform apply targets/comments
-        id: apply-targets/comments
+        run: terraform -chdir=./targets/bootstrap init
+      - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/comments apply -auto-approve
+        run: terraform -chdir=./targets/bootstrap plan

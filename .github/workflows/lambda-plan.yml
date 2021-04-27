@@ -1,10 +1,10 @@
-name: Terraform plan - target/targets/bootstrap
+name: Terraform plan - target/lambda
 on:
   pull_request:
     branches: [ master ]
 
 jobs:
-  targets/bootstrap-plan-check:
+  lambda-plan-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -14,9 +14,9 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/bootstrap init
+        run: terraform -chdir=./targets/lambda init
       - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/targets/bootstrap plan
+        run: terraform -chdir=./targets/lambda plan
