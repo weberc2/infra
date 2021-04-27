@@ -26,13 +26,13 @@ func main() {
 		log.Fatalf("Finding targets: %v", err)
 	}
 
-	for i := range targets {
-		t, err := filepath.Rel("./targets", targets[i])
-		if err != nil {
-			log.Fatalf("Finding relative path of '%s': %v", targets[i], err)
-		}
-		targets[i] = t
-	}
+	// for i := range targets {
+	// 	t, err := filepath.Rel("./targets", targets[i])
+	// 	if err != nil {
+	// 		log.Fatalf("Finding relative path of '%s': %v", targets[i], err)
+	// 	}
+	// 	targets[i] = t
+	// }
 
 	for _, target := range targets {
 		for templateName, template := range templates {
