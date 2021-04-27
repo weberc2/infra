@@ -15,10 +15,13 @@ resource "aws_s3_bucket" "state" {
 }
 
 resource "aws_dynamodb_table" "lock" {
-  name           = "TerraformStateLock"
-  hash_key       = "LockID"
-  read_capacity  = 25
-  write_capacity = 25
+  name     = "TerraformStateLock"
+  hash_key = "LockID"
+
+  # I only get 25 free capacity units each month for both reading and writing,
+  # so I don't want to use them all here.
+  read_capacity  = 4
+  write_capacity = 4
 
 
   attribute {
