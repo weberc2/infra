@@ -158,7 +158,7 @@ func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
 			continue
 		}
 
-		for _, projectType := range types {
+		for i, projectType := range types {
 			if file.Name() == projectType.KeyFile {
 				path, err := filepath.Rel(root, dir)
 				if err != nil {
@@ -168,7 +168,7 @@ func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
 				projects = append(
 					projects,
 					Project{
-						Type: &projectType,
+						Type: &types[i],
 						Path: path,
 					},
 				)
@@ -224,6 +224,7 @@ func main() {
 
 	// Render the templates for each project
 	for _, project := range projects {
+		log.Printf("INFO %s - %s", project.Type.Identifier, project.Path)
 		if err := project.renderTemplates(tmpDir); err != nil {
 			log.Fatal(err)
 		}
