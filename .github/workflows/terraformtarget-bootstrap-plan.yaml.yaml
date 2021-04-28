@@ -1,10 +1,10 @@
-name: Terraform plan - target/comments
+name: Terraform plan - terraformtarget-bootstrap
 on:
   pull_request:
     branches: [ master ]
 
 jobs:
-  comments-plan-check:
+  terraformtarget-bootstrap-plan-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -14,9 +14,9 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/comments init
+        run: terraform -chdir=targets/bootstrap init
       - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/comments plan
+        run: terraform -chdir=targets/bootstrap plan

@@ -1,4 +1,4 @@
-name: Terraform apply - target/comments
+name: Terraform apply - terraformtarget-comments
 on:
   push:
     branches: [ master ]
@@ -11,15 +11,15 @@ jobs:
         uses: actions/checkout@v2
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
-      - name: Terraform init comments
-        id: init-comments
+      - name: Terraform init terraformtarget-comments
+        id: init-terraformtarget-comments
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/comments init
-      - name: Terraform apply comments
-        id: apply-comments
+        run: terraform -chdir=targets/comments init
+      - name: Terraform apply terraformtarget-comments
+        id: apply-terraformtarget-comments
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/comments apply -auto-approve
+        run: terraform -chdir=targets/comments apply -auto-approve

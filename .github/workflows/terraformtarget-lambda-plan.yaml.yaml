@@ -1,25 +1,22 @@
-name: Terraform apply - target/lambda
+name: Terraform plan - terraformtarget-lambda
 on:
-  push:
+  pull_request:
     branches: [ master ]
 
 jobs:
-  apply:
+  terraformtarget-lambda-plan-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
-      - name: Terraform init lambda
-        id: init-lambda
+      - name: Terraform init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/lambda init
-      - name: Terraform apply lambda
-        id: apply-lambda
+        run: terraform -chdir=targets/lambda init
+      - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=./targets/lambda apply -auto-approve
+        run: terraform -chdir=targets/lambda plan
