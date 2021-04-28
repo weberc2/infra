@@ -49,8 +49,20 @@ type ProjectType struct {
 	// name of the project in question when the output file is rendered into
 	// the `~/.github/workflows` directory. The templates themselves may
 	// reference `{{ .Project }}` which will be interpolated with the project
-	// name.
+	// name. NOTE: All template names should end with `.yaml`.
 	Templates []*template.Template
+}
+
+func (pt *ProjectType) ValidateTemplateNames() error {
+	for _, template := range pt.Templates {
+		if name := template.Name(); !strings.HasSuffix(name, ".yaml") {
+			return fmt.Errorf(
+				"Template '%s' doesn't have `.yaml` suffix",
+				name,
+			)
+		}
+	}
+	return nil
 }
 
 // Project represents a project in a repository. Each project has a type (see
@@ -283,7 +295,7 @@ var projectTypes = []ProjectType{
 		KeyFile:    "go.mod",
 		Templates: []*template.Template{
 			makeTemplate(
-				"${project}-test",
+				"${project}-test.yaml",
 				`name: {{ .Name }} test
 on:
   pull_request:
@@ -392,16 +404,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: File extensions set properly
-        # error if there are any files in the directory that do not have the
-        # .yaml extension.
-        run: |
-          nonYamlFiles="$(ls .github/workflows/ | grep -v "yaml")"
-          if [[ -n "$nonYamlFiles" ]]; then
-               echo "Found non-yaml files in .github/workflows/:"
-               echo $nonYamlFiles
-               exit 1
-          fi
       - uses: actions/setup-go@v2
       - name: Run script
         run: go run scripts/generate-workflows.go
