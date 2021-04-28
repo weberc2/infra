@@ -77,10 +77,8 @@ func (p *Project) Name() string {
 
 func (p *Project) renderTemplates(dir string) error {
 	for _, template := range p.Type.Templates {
-		filePath := filepath.Join(
-			dir,
-			strings.Replace(template.Name(), "${project}", p.Name(), -1),
-		)
+		fileName := strings.Replace(template.Name(), "${project}", p.Name(), -1)
+		filePath := filepath.Join(dir, fileName)
 		if err := func() error {
 			file, err := os.Create(filePath)
 			if err != nil {
@@ -103,6 +101,7 @@ func (p *Project) renderTemplates(dir string) error {
 				err,
 			)
 		}
+		log.Printf("INFO Staging %s", fileName)
 	}
 	return nil
 }
@@ -203,24 +202,24 @@ func main() {
 	// official `~/.github/workflows` directory.
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatalf("Creating temp dir: %v", err)
+		log.Fatalf("FATAL Creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// Find the root of the repository
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Getting working directory: %v", err)
+		log.Fatalf("FATAL Getting working directory: %v", err)
 	}
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		log.Fatalf("Finding repo root: %v", err)
+		log.Fatalf("FATAL Finding repo root: %v", err)
 	}
 
 	// Collect the projects from the repository
 	projects, err := FindProjects(projectTypes, repoRoot)
 	if err != nil {
-		log.Fatalf("Collecting projects: %v", err)
+		log.Fatalf("FATAL Collecting projects: %v", err)
 	}
 
 	// Render the templates for each project
@@ -237,12 +236,20 @@ func main() {
 		func() {
 			file, err := os.Create(filePath)
 			if err != nil {
-				log.Fatalf("Creating static file '%s': %v", filePath, err)
+				log.Fatalf(
+					"FATAL Creating static file '%s': %v",
+					filePath,
+					err,
+				)
 			}
 			defer file.Close()
 
 			if _, err := file.WriteString(contents); err != nil {
-				log.Fatalf("Writing to static file '%s': %v", filePath, err)
+				log.Fatalf(
+					"FATAL Writing to static file '%s': %v",
+					filePath,
+					err,
+				)
 			}
 		}()
 	}
@@ -251,18 +258,42 @@ func main() {
 	if err := os.Rename(tmpDir, dir); err != nil {
 		if os.IsExist(err) {
 			if err := os.RemoveAll(dir); err != nil {
-				log.Fatalf("Removing dir '%s': %v", dir, err)
+				log.Fatalf("FATAL Removing dir '%s': %v", dir, err)
 			}
 			if err := os.Rename(tmpDir, dir); err != nil {
-				log.Fatalf("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+				log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
 			}
 		} else {
-			log.Fatalf("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+			log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
 		}
 	}
+
+	log.Printf("INFO Promoting staged files")
 }
 
 var projectTypes = []ProjectType{
+	ProjectType{
+		Identifier: "golang",
+		KeyFile:    "go.mod",
+		Templates: []*template.Template{
+			template.Must(template.New("${project}-test").Parse(
+				`name: {{ .Name }} test
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  {{ .Name }}-test:
+    runs-on: ubuntu-latest
+	steps:
+	  - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+	  - name: Test
+		run: go test -v {{ .Path }}/...
+`,
+			)),
+		},
+	},
 	ProjectType{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
@@ -329,7 +360,7 @@ jobs:
 }
 
 var staticFiles = map[string]string{
-	"terraform-fmt.yml": `name: Terraform format check
+	"terraform-fmt.yaml": `name: Terraform format check
 
 on:
   pull_request:
@@ -345,7 +376,7 @@ jobs:
       - name: Terraform format check
         run: terraform fmt -recursive -check
 `,
-	"generate-workflows-check.yml": `name: Generate workflows check
+	"generate-workflows-check.yaml": `name: Generate workflows check
 
 on:
   pull_request:
