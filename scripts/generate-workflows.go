@@ -49,8 +49,20 @@ type ProjectType struct {
 	// name of the project in question when the output file is rendered into
 	// the `~/.github/workflows` directory. The templates themselves may
 	// reference `{{ .Project }}` which will be interpolated with the project
-	// name.
+	// name. NOTE: All template names should end with `.yaml`.
 	Templates []*template.Template
+}
+
+func (pt *ProjectType) ValidateTemplateNames() error {
+	for _, template := range pt.Templates {
+		if name := template.Name(); !strings.HasSuffix(name, ".yaml") {
+			return fmt.Errorf(
+				"Template '%s' doesn't have `.yaml` suffix",
+				name,
+			)
+		}
+	}
+	return nil
 }
 
 // Project represents a project in a repository. Each project has a type (see
@@ -77,10 +89,8 @@ func (p *Project) Name() string {
 
 func (p *Project) renderTemplates(dir string) error {
 	for _, template := range p.Type.Templates {
-		filePath := filepath.Join(
-			dir,
-			strings.Replace(template.Name(), "${project}", p.Name(), -1),
-		)
+		fileName := strings.Replace(template.Name(), "${project}", p.Name(), -1)
+		filePath := filepath.Join(dir, fileName)
 		if err := func() error {
 			file, err := os.Create(filePath)
 			if err != nil {
@@ -103,6 +113,7 @@ func (p *Project) renderTemplates(dir string) error {
 				err,
 			)
 		}
+		log.Printf("INFO Staging %s", fileName)
 	}
 	return nil
 }
@@ -159,7 +170,7 @@ func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
 			continue
 		}
 
-		for _, projectType := range types {
+		for i, projectType := range types {
 			if file.Name() == projectType.KeyFile {
 				path, err := filepath.Rel(root, dir)
 				if err != nil {
@@ -169,7 +180,7 @@ func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
 				projects = append(
 					projects,
 					Project{
-						Type: &projectType,
+						Type: &types[i],
 						Path: path,
 					},
 				)
@@ -203,24 +214,24 @@ func main() {
 	// official `~/.github/workflows` directory.
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatalf("Creating temp dir: %v", err)
+		log.Fatalf("FATAL Creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// Find the root of the repository
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Getting working directory: %v", err)
+		log.Fatalf("FATAL Getting working directory: %v", err)
 	}
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		log.Fatalf("Finding repo root: %v", err)
+		log.Fatalf("FATAL Finding repo root: %v", err)
 	}
 
 	// Collect the projects from the repository
 	projects, err := FindProjects(projectTypes, repoRoot)
 	if err != nil {
-		log.Fatalf("Collecting projects: %v", err)
+		log.Fatalf("FATAL Collecting projects: %v", err)
 	}
 
 	// Render the templates for each project
@@ -232,17 +243,25 @@ func main() {
 
 	// Render the static files
 	for fileName, contents := range staticFiles {
-		log.Printf("INFO Generating file %s", fileName)
+		log.Printf("INFO Staging %s", fileName)
 		filePath := filepath.Join(tmpDir, fileName)
 		func() {
 			file, err := os.Create(filePath)
 			if err != nil {
-				log.Fatalf("Creating static file '%s': %v", filePath, err)
+				log.Fatalf(
+					"FATAL Creating static file '%s': %v",
+					filePath,
+					err,
+				)
 			}
 			defer file.Close()
 
 			if _, err := file.WriteString(contents); err != nil {
-				log.Fatalf("Writing to static file '%s': %v", filePath, err)
+				log.Fatalf(
+					"FATAL Writing to static file '%s': %v",
+					filePath,
+					err,
+				)
 			}
 		}()
 	}
@@ -251,25 +270,60 @@ func main() {
 	if err := os.Rename(tmpDir, dir); err != nil {
 		if os.IsExist(err) {
 			if err := os.RemoveAll(dir); err != nil {
-				log.Fatalf("Removing dir '%s': %v", dir, err)
+				log.Fatalf("FATAL Removing dir '%s': %v", dir, err)
 			}
 			if err := os.Rename(tmpDir, dir); err != nil {
-				log.Fatalf("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+				log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
 			}
 		} else {
-			log.Fatalf("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+			log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
 		}
 	}
+
+	log.Printf("INFO Promoting staged files")
+}
+
+func makeTemplate(name, body string) *template.Template {
+	return template.Must(
+		template.New(name).Parse(strings.Replace(body, "\t", "    ", -1)),
+	)
 }
 
 var projectTypes = []ProjectType{
 	ProjectType{
+		Identifier: "golang",
+		KeyFile:    "go.mod",
+		Templates: []*template.Template{
+			makeTemplate(
+				"${project}-test.yaml",
+				`name: {{ .Name }} test
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+
+jobs:
+  {{ .Name }}-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Test
+        # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+        # search GOPATH instead of the module at {{ .Path }}.
+        run: cd {{ .Path }} && go test -v ./...
+`,
+			),
+		},
+	},
+	ProjectType{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
 		Templates: []*template.Template{
-			template.Must(
-				template.New("${project}-plan.yaml").Parse(
-					`name: Terraform plan - {{ .Name }}
+			makeTemplate(
+				"${project}-plan.yaml",
+				`name: Terraform plan - {{ .Name }}
 on:
   pull_request:
     branches: [ master ]
@@ -292,11 +346,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
         run: terraform -chdir={{ .Path }} plan
 `,
-				),
 			),
-			template.Must(
-				template.New("${project}-apply.yaml").Parse(
-					`name: Terraform apply - {{ .Name }}
+			makeTemplate(
+				"${project}-apply.yaml",
+				`name: Terraform apply - {{ .Name }}
 on:
   push:
     branches: [ master ]
@@ -322,14 +375,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
         run: terraform -chdir={{ .Path }} apply -auto-approve
 `,
-				),
 			),
 		},
 	},
 }
 
 var staticFiles = map[string]string{
-	"terraform-fmt.yml": `name: Terraform format check
+	"terraform-fmt.yaml": `name: Terraform format check
 
 on:
   pull_request:
@@ -345,7 +397,7 @@ jobs:
       - name: Terraform format check
         run: terraform fmt -recursive -check
 `,
-	"generate-workflows-check.yml": `name: Generate workflows check
+	"generate-workflows-check.yaml": `name: Generate workflows check
 
 on:
   pull_request:
