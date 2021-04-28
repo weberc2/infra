@@ -2,6 +2,8 @@ name: golang-comments-service test
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
   golang-comments-service-test:

@@ -300,6 +300,8 @@ var projectTypes = []ProjectType{
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
   {{ .Name }}-test:
