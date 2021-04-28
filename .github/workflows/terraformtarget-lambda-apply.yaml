@@ -1,4 +1,4 @@
-name: Terraform apply - terraformtarget-lambda
+name: terraformtarget-lambda apply
 on:
   push:
     branches: [ master ]

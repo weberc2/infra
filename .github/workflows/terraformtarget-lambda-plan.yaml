@@ -1,4 +1,4 @@
-name: Terraform plan - terraformtarget-lambda
+name: terraformtarget-lambda plan
 on:
   pull_request:
     branches: [ master ]

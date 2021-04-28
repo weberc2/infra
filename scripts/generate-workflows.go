@@ -323,7 +323,7 @@ jobs:
 		Templates: []*template.Template{
 			makeTemplate(
 				"${project}-plan.yaml",
-				`name: Terraform plan - {{ .Name }}
+				`name: {{ .Name }} plan
 on:
   pull_request:
     branches: [ master ]
@@ -349,7 +349,7 @@ jobs:
 			),
 			makeTemplate(
 				"${project}-apply.yaml",
-				`name: Terraform apply - {{ .Name }}
+				`name: {{ .Name }} apply
 on:
   push:
     branches: [ master ]
