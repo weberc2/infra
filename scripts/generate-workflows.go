@@ -365,11 +365,11 @@ jobs:
       - name: Check diff
         run: |
           if [[ -n "$(git diff .github/workflows)" ]]; then
-			echo "Unexpected differences in the .github/workflows directory:"
-			git diff .github/workflows
-			echo ""
-            echo "Run ./scripts/generate-workflows.go from the repo root and commit the results."
-            exit 1
+              echo "Unexpected differences in the .github/workflows directory:"
+              git diff .github/workflows
+              echo ""
+              echo "Run ./scripts/generate-workflows.go from the repo root and commit the results."
+              exit 1
           fi
 `,
 }
