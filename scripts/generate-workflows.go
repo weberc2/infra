@@ -224,7 +224,6 @@ func main() {
 
 	// Render the templates for each project
 	for _, project := range projects {
-		log.Printf("INFO %s - %s", project.Type.Identifier, project.Path)
 		if err := project.renderTemplates(tmpDir); err != nil {
 			log.Fatal(err)
 		}
@@ -232,7 +231,7 @@ func main() {
 
 	// Render the static files
 	for fileName, contents := range staticFiles {
-		log.Printf("INFO Generating file %s", fileName)
+		log.Printf("INFO Staging %s", fileName)
 		filePath := filepath.Join(tmpDir, fileName)
 		func() {
 			file, err := os.Create(filePath)
@@ -388,6 +387,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+	  - name: File extensions set properly
+	  	# error if there are any files in the directory that do not have the
+		# .yaml extension.
+	    run: |
+		  nonYamlFiles="$(ls .github/workflows/ | grep -v "yaml")"
+		  if [[ -n "$nonYamlFiles" ]]; then
+			   echo "Found non-yaml files in .github/workflows/:"
+			   echo $nonYamlFiles
+		  fi
       - uses: actions/setup-go@v2
       - name: Run script
         run: go run scripts/generate-workflows.go
