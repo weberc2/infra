@@ -1,4 +1,4 @@
-name: Terraform apply - terraformtarget-bootstrap
+name: terraformtarget-bootstrap apply
 on:
   push:
     branches: [ master ]
