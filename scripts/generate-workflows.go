@@ -387,15 +387,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-	  - name: File extensions set properly
-	  	# error if there are any files in the directory that do not have the
-		# .yaml extension.
-	    run: |
-		  nonYamlFiles="$(ls .github/workflows/ | grep -v "yaml")"
-		  if [[ -n "$nonYamlFiles" ]]; then
-			   echo "Found non-yaml files in .github/workflows/:"
-			   echo $nonYamlFiles
-		  fi
+      - name: File extensions set properly
+          # error if there are any files in the directory that do not have the
+        # .yaml extension.
+        run: |
+          nonYamlFiles="$(ls .github/workflows/ | grep -v "yaml")"
+          if [[ -n "$nonYamlFiles" ]]; then
+               echo "Found non-yaml files in .github/workflows/:"
+               echo $nonYamlFiles
+          fi
       - uses: actions/setup-go@v2
       - name: Run script
         run: go run scripts/generate-workflows.go
