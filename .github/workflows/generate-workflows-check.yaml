@@ -17,7 +17,7 @@ jobs:
           if [[ -n "$nonYamlFiles" ]]; then
                echo "Found non-yaml files in .github/workflows/:"
                echo $nonYamlFiles
-			   exit 1
+               exit 1
           fi
       - uses: actions/setup-go@v2
       - name: Run script

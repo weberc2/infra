@@ -271,12 +271,19 @@ func main() {
 	log.Printf("INFO Promoting staged files")
 }
 
+func makeTemplate(name, body string) *template.Template {
+	return template.Must(
+		template.New(name).Parse(strings.Replace(body, "\t", "    ", -1)),
+	)
+}
+
 var projectTypes = []ProjectType{
 	ProjectType{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
 		Templates: []*template.Template{
-			template.Must(template.New("${project}-test").Parse(
+			makeTemplate(
+				"${project}-test",
 				`name: {{ .Name }} test
 on:
   pull_request:
@@ -285,22 +292,22 @@ on:
 jobs:
   {{ .Name }}-test:
     runs-on: ubuntu-latest
-	steps:
-	  - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
-	  - name: Test
-		run: go test -v {{ .Path }}/...
+      - name: Test
+        run: go test -v {{ .Path }}/...
 `,
-			)),
+			),
 		},
 	},
 	ProjectType{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
 		Templates: []*template.Template{
-			template.Must(
-				template.New("${project}-plan.yaml").Parse(
-					`name: Terraform plan - {{ .Name }}
+			makeTemplate(
+				"${project}-plan.yaml",
+				`name: Terraform plan - {{ .Name }}
 on:
   pull_request:
     branches: [ master ]
@@ -323,11 +330,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
         run: terraform -chdir={{ .Path }} plan
 `,
-				),
 			),
-			template.Must(
-				template.New("${project}-apply.yaml").Parse(
-					`name: Terraform apply - {{ .Name }}
+			makeTemplate(
+				"${project}-apply.yaml",
+				`name: Terraform apply - {{ .Name }}
 on:
   push:
     branches: [ master ]
@@ -353,7 +359,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
         run: terraform -chdir={{ .Path }} apply -auto-approve
 `,
-				),
 			),
 		},
 	},
