@@ -308,7 +308,9 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - name: Test
-        run: go test -v {{ .Path }}/...
+        # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+        # search GOPATH instead of the module at {{ .Path }}.
+        run: cd {{ .Path }} && go test -v ./...
 `,
 			),
 		},
