@@ -79,10 +79,7 @@ func (p *Project) renderTemplates(dir string) error {
 	for _, template := range p.Type.Templates {
 		filePath := filepath.Join(
 			dir,
-			fmt.Sprintf(
-				"%s.yaml",
-				strings.Replace(template.Name(), "${project}", p.Name(), -1),
-			),
+			strings.Replace(template.Name(), "${project}", p.Name(), -1),
 		)
 		if err := func() error {
 			file, err := os.Create(filePath)
