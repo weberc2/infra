@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"io/ioutil"
 	"log"
 	"os"
@@ -113,7 +114,7 @@ func (p *Project) renderTemplates(dir string) error {
 				err,
 			)
 		}
-		log.Printf("INFO Staging %s", fileName)
+		log.Println(success("Staged %s", fileName))
 	}
 	return nil
 }
@@ -203,35 +204,35 @@ func findRepoRoot(dir string) (string, error) {
 }
 
 func main() {
-	dir := "./.github/workflows"
-	if len(os.Args) > 1 {
-		dir = os.Args[1]
-	}
-
 	// Create a temporary directory to represent the final
 	// `~/.github/workflows` directory. If all goes well, we'll do a rename at
 	// the end to atomically "promote" this temporary directory to become the
 	// official `~/.github/workflows` directory.
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatalf("FATAL Creating temp dir: %v", err)
+		log.Fatal(color.RedString("FATAL Creating temp dir: %v", err))
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// Find the root of the repository
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("FATAL Getting working directory: %v", err)
+		log.Fatal(color.RedString("FATAL Getting working directory: %v", err))
 	}
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		log.Fatalf("FATAL Finding repo root: %v", err)
+		log.Fatal(color.RedString("FATAL Finding repo root: %v", err))
+	}
+
+	dir := filepath.Join(repoRoot, ".github/workflows")
+	if len(os.Args) > 1 {
+		dir = os.Args[1]
 	}
 
 	// Collect the projects from the repository
 	projects, err := FindProjects(projectTypes, repoRoot)
 	if err != nil {
-		log.Fatalf("FATAL Collecting projects: %v", err)
+		log.Fatal(color.RedString("FATAL Collecting projects: %v", err))
 	}
 
 	// Render the templates for each project
@@ -243,44 +244,58 @@ func main() {
 
 	// Render the static files
 	for fileName, contents := range staticFiles {
-		log.Printf("INFO Staging %s", fileName)
 		filePath := filepath.Join(tmpDir, fileName)
 		func() {
 			file, err := os.Create(filePath)
 			if err != nil {
-				log.Fatalf(
+				log.Fatal(color.RedString(
 					"FATAL Creating static file '%s': %v",
 					filePath,
 					err,
-				)
+				))
 			}
 			defer file.Close()
 
 			if _, err := file.WriteString(contents); err != nil {
-				log.Fatalf(
+				log.Fatal(color.RedString(
 					"FATAL Writing to static file '%s': %v",
 					filePath,
 					err,
-				)
+				))
 			}
 		}()
+		log.Println(success("Staged %s", fileName))
 	}
 
 	// Atomically "commit" the changes to `~/.github/workflows`.
 	if err := os.Rename(tmpDir, dir); err != nil {
 		if os.IsExist(err) {
 			if err := os.RemoveAll(dir); err != nil {
-				log.Fatalf("FATAL Removing dir '%s': %v", dir, err)
+				log.Fatalf(color.RedString(
+					"FATAL Removing dir '%s': %v",
+					dir,
+					err,
+				))
 			}
 			if err := os.Rename(tmpDir, dir); err != nil {
-				log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
+				log.Fatal(color.RedString(
+					"FATAL Renaming '%s' to '%s': %v",
+					tmpDir,
+					dir,
+					err,
+				))
 			}
 		} else {
-			log.Fatalf("FATAL Renaming '%s' to '%s': %v", tmpDir, dir, err)
+			log.Fatal(color.RedString(
+				"FATAL Renaming '%s' to '%s': %v",
+				tmpDir,
+				dir,
+				err,
+			))
 		}
 	}
 
-	log.Printf("INFO Promoting staged files")
+	log.Println(success("Promoted staged files"))
 }
 
 func makeTemplate(name, body string) *template.Template {
@@ -410,7 +425,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - name: Run script
-        run: go run scripts/generate-workflows.go
+        run: pushd scripts/generate-workflows && go run .; popd
       - name: Check diff
         run: |
           if [[ -n "$(git diff .github/workflows)" ]]; then
@@ -421,4 +436,8 @@ jobs:
               exit 1
           fi
 `,
+}
+
+func success(format string, v ...interface{}) string {
+	return color.GreenString("✅ "+format, v...)
 }
