@@ -13,6 +13,58 @@ import (
 	"github.com/fatih/color"
 )
 
+type WorkflowIdentifier int
+
+const (
+	WorkflowPullRequest WorkflowIdentifier = iota
+	WorkflowMerge
+	WorkflowMax
+)
+
+func (wid WorkflowIdentifier) String() string {
+	switch wid {
+	case WorkflowPullRequest:
+		return "Pull Request"
+	case WorkflowMerge:
+		return "Merge"
+	default:
+		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
+	}
+}
+
+func (wid WorkflowIdentifier) Trigger() string {
+	switch wid {
+	case WorkflowPullRequest:
+		return "pull_request"
+	case WorkflowMerge:
+		return "push"
+	default:
+		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
+	}
+}
+
+func (wid WorkflowIdentifier) FileName() string {
+	switch wid {
+	case WorkflowPullRequest:
+		return "pull-request.yaml"
+	case WorkflowMerge:
+		return "merge.yaml"
+	default:
+		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
+	}
+}
+
+type JobType struct {
+	// Name is suffixed onto all jobs of this job type.
+	Name string
+
+	// Template is the templates which will be rendered for
+	// a given project of this project type. The resulting job name will be
+	// structured `${project.Name()}-${job.Name}`, and it will be rendered onto
+	// the file which corresponds to the job's workflow.
+	Template *template.Template
+}
+
 // Since projects can live in any directory in the repo, but since we take the
 // basename of the project directory as the project name, it is possible that
 // there are two projects with the same name (e.g., `bar/foo` and `baz/foo`).
@@ -44,26 +96,7 @@ type ProjectType struct {
 	// multiple types.
 	KeyFile string
 
-	// Templates is the collection of text templates which will be rendered for
-	// a given project of this project type. The name of the template will be
-	// rendered as the name of the output file. The output file to be written to
-	// ~/.github/workflows will be the template name prefixed by the project
-	// name (see `template.Template.Name()` and `Project.Name()`). The templates
-	// themselves may reference `{{ .Project }}` which will be interpolated with
-	// the project name. NOTE: All template names should end with `.yaml`.
-	Templates []*template.Template
-}
-
-func (pt *ProjectType) ValidateTemplateNames() error {
-	for _, template := range pt.Templates {
-		if name := template.Name(); !strings.HasSuffix(name, ".yaml") {
-			return fmt.Errorf(
-				"Template '%s' doesn't have `.yaml` suffix",
-				name,
-			)
-		}
-	}
-	return nil
+	Workflows [WorkflowMax][]JobType
 }
 
 // Project represents a project in a repository. Each project has a type (see
@@ -86,37 +119,6 @@ type Project struct {
 // a parameter to template the output files.
 func (p *Project) Name() string {
 	return fmt.Sprintf("%s-%s", p.Type.Identifier, filepath.Base(p.Path))
-}
-
-func (p *Project) renderTemplates(dir string) error {
-	for _, template := range p.Type.Templates {
-		fileName := fmt.Sprintf("%s-%s", p.Name(), template.Name())
-		filePath := filepath.Join(dir, fileName)
-		if err := func() error {
-			file, err := os.Create(filePath)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			return template.Execute(file, struct {
-				Name string
-				Path string
-			}{
-				Name: p.Name(),
-				Path: p.Path,
-			})
-		}(); err != nil {
-			return fmt.Errorf(
-				"Applying template '%s' to project '%s': %w",
-				template.Name(),
-				p.Path,
-				err,
-			)
-		}
-		log.Println(success("Staged %s", fileName))
-	}
-	return nil
 }
 
 // FindProjects searches the repo root to locate project directories and builds
@@ -210,18 +212,18 @@ func main() {
 	// official `~/.github/workflows` directory.
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatal(color.RedString("FATAL Creating temp dir: %v", err))
+		fatal("Creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// Find the root of the repository
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(color.RedString("FATAL Getting working directory: %v", err))
+		fatal("Getting working directory: %v", err)
 	}
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		log.Fatal(color.RedString("FATAL Finding repo root: %v", err))
+		fatal("Finding repo root: %v", err)
 	}
 
 	dir := filepath.Join(repoRoot, ".github/workflows")
@@ -232,14 +234,12 @@ func main() {
 	// Collect the projects from the repository
 	projects, err := FindProjects(projectTypes, repoRoot)
 	if err != nil {
-		log.Fatal(color.RedString("FATAL Collecting projects: %v", err))
+		fatal("Collecting projects: %v", err)
 	}
 
-	// Render the templates for each project
-	for _, project := range projects {
-		if err := project.renderTemplates(tmpDir); err != nil {
-			log.Fatal(err)
-		}
+	// Assemble and render the workflow files
+	if err := Render(tmpDir, MaterializeWorkflows(projects)); err != nil {
+		fatal("rendering workflows: %v", err)
 	}
 
 	// Render the static files
@@ -248,54 +248,32 @@ func main() {
 		func() {
 			file, err := os.Create(filePath)
 			if err != nil {
-				log.Fatal(color.RedString(
-					"FATAL Creating static file '%s': %v",
-					filePath,
-					err,
-				))
+				fatal("Creating static file '%s': %v", filePath, err)
 			}
 			defer file.Close()
 
 			if _, err := file.WriteString(contents); err != nil {
-				log.Fatal(color.RedString(
-					"FATAL Writing to static file '%s': %v",
-					filePath,
-					err,
-				))
+				fatal("Writing to static file '%s': %v", filePath, err)
 			}
 		}()
-		log.Println(success("Staged %s", fileName))
+		success("Staged %s", fileName)
 	}
 
 	// Atomically "commit" the changes to `~/.github/workflows`.
 	if err := os.Rename(tmpDir, dir); err != nil {
 		if os.IsExist(err) {
 			if err := os.RemoveAll(dir); err != nil {
-				log.Fatalf(color.RedString(
-					"FATAL Removing dir '%s': %v",
-					dir,
-					err,
-				))
+				fatal("Removing dir '%s': %v", dir, err)
 			}
 			if err := os.Rename(tmpDir, dir); err != nil {
-				log.Fatal(color.RedString(
-					"FATAL Renaming '%s' to '%s': %v",
-					tmpDir,
-					dir,
-					err,
-				))
+				fatal("Renaming '%s' to '%s': %v", tmpDir, dir, err)
 			}
 		} else {
-			log.Fatal(color.RedString(
-				"FATAL Renaming '%s' to '%s': %v",
-				tmpDir,
-				dir,
-				err,
-			))
+			fatal("Renaming '%s' to '%s': %v", tmpDir, dir, err)
 		}
 	}
 
-	log.Println(success("Promoted staged files"))
+	success("Promoted staged files")
 }
 
 func makeTemplate(name, body string) *template.Template {
@@ -308,92 +286,95 @@ var projectTypes = []ProjectType{
 	{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
-		Templates: []*template.Template{
-			makeTemplate(
-				"test.yaml",
-				`name: {{ .Name }} test
-on:
-  pull_request:
-    branches: [ master ]
-  push:
-    branches: [ master ]
-
-jobs:
-  {{ .Name }}-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-      - name: Test
-        # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
-        # search GOPATH instead of the module at {{ .Path }}.
-        run: cd {{ .Path }} && go test -v ./...
-`,
-			),
+		Workflows: [WorkflowMax][]JobType{
+			WorkflowPullRequest: {
+				{
+					Name:     "test",
+					Template: golangTestTemplate,
+				},
+			},
+			WorkflowMerge: {
+				{
+					Name:     "test",
+					Template: golangTestTemplate,
+				},
+			},
 		},
 	},
 	{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
-		Templates: []*template.Template{
-			makeTemplate(
-				"plan.yaml",
-				`name: {{ .Name }} plan
-on:
-  pull_request:
-    branches: [ master ]
-
-jobs:
-  {{ .Name }}-plan-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Terraform setup
-        uses: hashicorp/setup-terraform@v1
-      - name: Terraform init
-        env:
-          AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-          AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-        run: terraform -chdir={{ .Path }} init
-      - name: Terraform plan
-        env:
-          AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-          AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-        run: terraform -chdir={{ .Path }} plan
+		Workflows: [WorkflowMax][]JobType{
+			WorkflowPullRequest: {
+				{
+					Name: "plan",
+					Template: makeTemplate(
+						"plan",
+						`{{ .Name }}-plan-check:
+runs-on: ubuntu-latest
+steps:
+  - uses: actions/checkout@v2
+  - name: Terraform setup
+    uses: hashicorp/setup-terraform@v1
+  - name: Terraform init
+    env:
+      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+    run: terraform -chdir={{ .Path }} init
+  - name: Terraform plan
+    env:
+      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+    run: terraform -chdir={{ .Path }} plan
 `,
-			),
-			makeTemplate(
-				"apply.yaml",
-				`name: {{ .Name }} apply
-on:
-  push:
-    branches: [ master ]
-
-jobs:
-  apply:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Terraform setup
-        uses: hashicorp/setup-terraform@v1
-      - name: Terraform init {{ .Name }}
-        id: init-{{ .Name }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-          AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-        run: terraform -chdir={{ .Path }} init
-      - name: Terraform apply {{ .Name }}
-        id: apply-{{ .Name }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-          AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-        run: terraform -chdir={{ .Path }} apply -auto-approve
+					),
+				},
+			},
+			WorkflowMerge: {
+				{
+					Name: "apply",
+					Template: makeTemplate(
+						"apply",
+						`apply:
+runs-on: ubuntu-latest
+steps:
+  - name: Checkout
+    uses: actions/checkout@v2
+  - name: Terraform setup
+    uses: hashicorp/setup-terraform@v1
+  - name: Terraform init {{ .Name }}
+    id: init-{{ .Name }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+    run: terraform -chdir={{ .Path }} init
+  - name: Terraform apply {{ .Name }}
+    id: apply-{{ .Name }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+    run: terraform -chdir={{ .Path }} apply -auto-approve
 `,
-			),
+					),
+				},
+			},
 		},
 	},
 }
+
+var golangTestTemplate = makeTemplate(
+	"test",
+	`{{ .Name }}-test:
+runs-on: ubuntu-latest
+steps:
+  - uses: actions/checkout@v2
+  - uses: actions/setup-go@v2
+  - name: Test
+    # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+    # search GOPATH instead of the module at {{ .Path }}.
+    run: cd {{ .Path }} && go test -v ./...
+`,
+)
 
 var staticFiles = map[string]string{
 	"terraform-fmt.yaml": `name: Terraform format check
@@ -438,6 +419,10 @@ jobs:
 `,
 }
 
-func success(format string, v ...interface{}) string {
-	return color.GreenString("✅ "+format, v...)
+func success(format string, v ...interface{}) {
+	log.Println(color.GreenString("✅ "+format, v...))
+}
+
+func fatal(format string, v ...interface{}) {
+	log.Fatal(color.RedString("❌ "+format, v...))
 }
