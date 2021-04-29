@@ -24,7 +24,7 @@ jobs:
         run: |
           export GOBIN=$PWD/apps/comments-service/bin
           echo "GOBIN=$GOBIN" >> $GITHUB_ENV
-          (cd apps/comments-service && go get golang.org/x/lint)
+          (cd apps/comments-service && go get golang.org/x/lint/golint)
       - name: Lint
         # Evidently we can't 'go test apps/comments-service/...' or the go tool will
         # search GOPATH instead of the module at apps/comments-service.
@@ -49,7 +49,7 @@ jobs:
         run: |
           export GOBIN=$PWD/scripts/generate-workflows/bin
           echo "GOBIN=$GOBIN" >> $GITHUB_ENV
-          (cd scripts/generate-workflows && go get golang.org/x/lint)
+          (cd scripts/generate-workflows && go get golang.org/x/lint/golint)
       - name: Lint
         # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
         # search GOPATH instead of the module at scripts/generate-workflows.

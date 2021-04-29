@@ -373,7 +373,7 @@ var golangLintJobType = JobType{
 	  run: |
 	    export GOBIN=$PWD/{{ .Path }}/bin
 		echo "GOBIN=$GOBIN" >> $GITHUB_ENV
-	    (cd {{ .Path }} && go get golang.org/x/lint)
+	    (cd {{ .Path }} && go get golang.org/x/lint/golint)
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.
