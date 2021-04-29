@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/fatih/color"
 )
 
 // Since projects can live in any directory in the repo, but since we take the
@@ -45,12 +46,11 @@ type ProjectType struct {
 
 	// Templates is the collection of text templates which will be rendered for
 	// a given project of this project type. The name of the template will be
-	// rendered as the name of the output file. The template name should
-	// include the substring `${project}` which will be interpolated with the
-	// name of the project in question when the output file is rendered into
-	// the `~/.github/workflows` directory. The templates themselves may
-	// reference `{{ .Project }}` which will be interpolated with the project
-	// name. NOTE: All template names should end with `.yaml`.
+	// rendered as the name of the output file. The output file to be written to
+	// ~/.github/workflows will be the template name prefixed by the project
+	// name (see `template.Template.Name()` and `Project.Name()`). The templates
+	// themselves may reference `{{ .Project }}` which will be interpolated with
+	// the project name. NOTE: All template names should end with `.yaml`.
 	Templates []*template.Template
 }
 
@@ -90,7 +90,7 @@ func (p *Project) Name() string {
 
 func (p *Project) renderTemplates(dir string) error {
 	for _, template := range p.Type.Templates {
-		fileName := strings.Replace(template.Name(), "${project}", p.Name(), -1)
+		fileName := fmt.Sprintf("%s-%s", p.Name(), template.Name())
 		filePath := filepath.Join(dir, fileName)
 		if err := func() error {
 			file, err := os.Create(filePath)
@@ -305,12 +305,12 @@ func makeTemplate(name, body string) *template.Template {
 }
 
 var projectTypes = []ProjectType{
-	ProjectType{
+	{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
 		Templates: []*template.Template{
 			makeTemplate(
-				"${project}-test.yaml",
+				"test.yaml",
 				`name: {{ .Name }} test
 on:
   pull_request:
@@ -332,12 +332,12 @@ jobs:
 			),
 		},
 	},
-	ProjectType{
+	{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
 		Templates: []*template.Template{
 			makeTemplate(
-				"${project}-plan.yaml",
+				"plan.yaml",
 				`name: {{ .Name }} plan
 on:
   pull_request:
@@ -363,7 +363,7 @@ jobs:
 `,
 			),
 			makeTemplate(
-				"${project}-apply.yaml",
+				"apply.yaml",
 				`name: {{ .Name }} apply
 on:
   push:
@@ -425,7 +425,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - name: Run script
-        run: pushd scripts/generate-workflows && go run .; popd
+        run: (cd scripts/generate-workflows && go run .)
       - name: Check diff
         run: |
           if [[ -n "$(git diff .github/workflows)" ]]; then
