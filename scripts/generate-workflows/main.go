@@ -370,11 +370,14 @@ var golangLintJobType = JobType{
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
 	- name: Fetch golint
-	  run: (cd {{ .Path }} && go get golang.org/x/lint)
+	  run: |
+	    export GOBIN=$PWD/{{ .Path }}/bin
+		echo "GOBIN=$GOBIN" >> $GITHUB_ENV
+	    (cd {{ .Path }} && go get golang.org/x/lint)
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.
-      run: (cd {{ .Path }} && golint .)
+      run: (cd {{ .Path }} && $GOBIN/golint .)
 `,
 	),
 }
