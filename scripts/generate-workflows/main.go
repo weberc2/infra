@@ -367,7 +367,7 @@ var golangLintJobType = JobType{
         curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
         tar -xvf ./staticcheck_linux_amd64.tar.gz
         staticCheck="$PWD/staticcheck/staticcheck"
-        echo "::set-env name=staticCheck::$staticCheck"
+        echo "staticCheck=$staticCheck" >> $GITHUB_ENV
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.
