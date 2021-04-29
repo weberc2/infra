@@ -308,7 +308,7 @@ var projectTypes = []ProjectType{
 					Name: "plan",
 					Template: makeTemplate(
 						"plan",
-						`{{ .Name }}-plan-check:
+						`{{ .Name }}-plan:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v2
@@ -333,7 +333,7 @@ var projectTypes = []ProjectType{
 					Name: "apply",
 					Template: makeTemplate(
 						"apply",
-						`apply:
+						`{{ .Name }}-apply:
   runs-on: ubuntu-latest
   steps:
     - name: Checkout

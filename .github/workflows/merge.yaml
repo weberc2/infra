@@ -55,7 +55,7 @@ jobs:
         # search GOPATH instead of the module at scripts/generate-workflows.
         run: (cd scripts/generate-workflows && $GOBIN/golint -set_exit_status .)
   
-  apply:
+  terraformtarget-bootstrap-apply:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -75,7 +75,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap apply -auto-approve
   
-  apply:
+  terraformtarget-lambda-apply:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -95,7 +95,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/lambda apply -auto-approve
   
-  apply:
+  terraformtarget-remote-state-test-apply:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
