@@ -13,14 +13,24 @@ import (
 	"github.com/fatih/color"
 )
 
+// WorkflowIdentifier is an enum whose variants identify different workflows.
 type WorkflowIdentifier int
 
 const (
+	// WorkflowPullRequest identifies the PullRequest workflow.
 	WorkflowPullRequest WorkflowIdentifier = iota
+
+	// WorkflowMerge identifies the Merge workflow
 	WorkflowMerge
+
+	// WorkflowMax is the 'length' of the valid workflow identifiers.  It's not
+	// a valid WorkflowIdentifier itself, but rather it's used for arrays which
+	// are indexed by WorkflowIdentifiers to designate the length.  E.g.,
+	// `[WorkflowMax][]Job`.
 	WorkflowMax
 )
 
+// String returns the human-readable string representation of a WorkflowIdentifier.
 func (wid WorkflowIdentifier) String() string {
 	switch wid {
 	case WorkflowPullRequest:
@@ -32,6 +42,8 @@ func (wid WorkflowIdentifier) String() string {
 	}
 }
 
+// Trigger returns the GitHub Actions trigger key for the WorkflowIdentifier.
+// (E.g., the `pull_request` bit in `on: pull_request: ...`).
 func (wid WorkflowIdentifier) Trigger() string {
 	switch wid {
 	case WorkflowPullRequest:
@@ -43,6 +55,8 @@ func (wid WorkflowIdentifier) Trigger() string {
 	}
 }
 
+// FileName returns the workflow filename that corresponds to the
+// WorkflowIdentifier.
 func (wid WorkflowIdentifier) FileName() string {
 	switch wid {
 	case WorkflowPullRequest:
@@ -54,6 +68,8 @@ func (wid WorkflowIdentifier) FileName() string {
 	}
 }
 
+// JobType is the template or prototype from which `Job`s are created.  It
+// associates a job name with a text template.
 type JobType struct {
 	// Name is suffixed onto all jobs of this job type.
 	Name string
@@ -64,18 +80,6 @@ type JobType struct {
 	// the file which corresponds to the job's workflow.
 	Template *template.Template
 }
-
-// Since projects can live in any directory in the repo, but since we take the
-// basename of the project directory as the project name, it is possible that
-// there are two projects with the same name (e.g., `bar/foo` and `baz/foo`).
-// This would allow us to have collisions between files with the same name in
-// the `~/.github/workflows` directory (e.g., both `bar/foo` and `baz/foo`
-// would result in two attempts to write `~/.github/workflows/build-foo.yaml`
-// or similar. In order to resolve this, we will prefix the project name with
-// the project type such that we can have multiple projects with the same
-// basename without conflicts in the `~/.github/workflows` output directory,
-// and to prevent conflicts between projects of the same project type we will
-// detect and error.
 
 // ProjectType represents a kind of project, e.g., a Go project, a Terraform
 // project, a lambda project, etc. Each type of project is associated with a
@@ -96,6 +100,10 @@ type ProjectType struct {
 	// multiple types.
 	KeyFile string
 
+	// Workflows holds the `JobType`s associated with this project organized by
+	// the workflow for which they're intended.  Namely, the key for the array
+	// is intended to be a `WorkflowIdentifier` whose values are less than
+	// `WorkflowMax`.
 	Workflows [WorkflowMax][]JobType
 }
 
@@ -361,17 +369,10 @@ var golangLintJobType = JobType{
   steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
-    - name: Install staticcheck
-      run: |
-        set -eo pipefail
-        curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
-        tar -xvf ./staticcheck_linux_amd64.tar.gz
-        staticCheck="$PWD/staticcheck/staticcheck"
-        echo "staticCheck=$staticCheck" >> $GITHUB_ENV
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.
-      run: (cd {{ .Path }} && $staticCheck)
+      run: (cd {{ .Path }} && golint .)
 `,
 	),
 }

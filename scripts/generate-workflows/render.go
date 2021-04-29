@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// Render renders workflows into workflow YAML files in the provided output
+// directory.
 func Render(outDir string, workflows Workflows) error {
 	for workflow, jobs := range workflows {
 		workflow := WorkflowIdentifier(workflow)
@@ -19,6 +21,8 @@ func Render(outDir string, workflows Workflows) error {
 	return nil
 }
 
+// RenderWorkflow renders a single workflow into a workflow YAML file in the
+// provided output directory.
 func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) error {
 	filePath := filepath.Join(outDir, workflow.FileName())
 	return withFileCreate(
