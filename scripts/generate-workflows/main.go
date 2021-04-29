@@ -1,206 +1,17 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/fatih/color"
+
+	"github.com/weberc2/infra/scripts/generate-workflows/pkg/projects"
 )
-
-// WorkflowIdentifier is an enum whose variants identify different workflows.
-type WorkflowIdentifier int
-
-const (
-	// WorkflowPullRequest identifies the PullRequest workflow.
-	WorkflowPullRequest WorkflowIdentifier = iota
-
-	// WorkflowMerge identifies the Merge workflow
-	WorkflowMerge
-
-	// WorkflowMax is the 'length' of the valid workflow identifiers.  It's not
-	// a valid WorkflowIdentifier itself, but rather it's used for arrays which
-	// are indexed by WorkflowIdentifiers to designate the length.  E.g.,
-	// `[WorkflowMax][]Job`.
-	WorkflowMax
-)
-
-// String returns the human-readable string representation of a WorkflowIdentifier.
-func (wid WorkflowIdentifier) String() string {
-	switch wid {
-	case WorkflowPullRequest:
-		return "Pull Request"
-	case WorkflowMerge:
-		return "Merge"
-	default:
-		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
-	}
-}
-
-// Trigger returns the GitHub Actions trigger key for the WorkflowIdentifier.
-// (E.g., the `pull_request` bit in `on: pull_request: ...`).
-func (wid WorkflowIdentifier) Trigger() string {
-	switch wid {
-	case WorkflowPullRequest:
-		return "pull_request"
-	case WorkflowMerge:
-		return "push"
-	default:
-		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
-	}
-}
-
-// FileName returns the workflow filename that corresponds to the
-// WorkflowIdentifier.
-func (wid WorkflowIdentifier) FileName() string {
-	switch wid {
-	case WorkflowPullRequest:
-		return "pull-request.yaml"
-	case WorkflowMerge:
-		return "merge.yaml"
-	default:
-		panic(fmt.Sprintf("Invalid WorkflowIdentifier: %d", wid))
-	}
-}
-
-// JobType is the template or prototype from which `Job`s are created.  It
-// associates a job name with a text template.
-type JobType struct {
-	// Name is suffixed onto all jobs of this job type.
-	Name string
-
-	// Template is the templates which will be rendered for
-	// a given project of this project type. The resulting job name will be
-	// structured `${project.Name()}-${job.Name}`, and it will be rendered onto
-	// the file which corresponds to the job's workflow.
-	Template *template.Template
-}
-
-// ProjectType represents a kind of project, e.g., a Go project, a Terraform
-// project, a lambda project, etc. Each type of project is associated with a
-// "key file" or a file in the root of the project which identifies the type of
-// the file (see the `KeyFile` field for more information) as well as a
-// collection of text templates which will be rendered for a project of this
-// type into the `~/.github/workflows` output directory.  See the `Templates`
-// field for more information.
-type ProjectType struct {
-	// Identifier will be prepended onto project names to disambiguate between
-	// projects with the same name but different project types.
-	Identifier string
-
-	// KeyFile is the file to look for which will identify a directory as a
-	// project of this ProjectType. E.g., for a Go project it will be `go.mod`,
-	// for a Terraform project it will be `terraform.tf`, etc. It is possible
-	// though probably inadvisable for a given directory to yield projects of
-	// multiple types.
-	KeyFile string
-
-	// Workflows holds the `JobType`s associated with this project organized by
-	// the workflow for which they're intended.  Namely, the key for the array
-	// is intended to be a `WorkflowIdentifier` whose values are less than
-	// `WorkflowMax`.
-	Workflows [WorkflowMax][]JobType
-}
-
-// Project represents a project in a repository. Each project has a type (see
-// `ProjectType` for more information) and a path (relative to the repo root).
-type Project struct {
-	// Type is the type of a project. It is used to render the final output
-	// files associated with this project into the `~/.github/workflows`
-	// directory.
-	Type *ProjectType
-
-	// Path is the path to the project directory relative to the root of the
-	// repository. The "name" of the project is the basename of the path
-	// prefixed by the project's type identifier (see
-	// `ProjectType.Identifier`).
-	Path string
-}
-
-// Name returns the name of the project by appending the basename of the
-// project's `Path` with the project's type's identifier. This will be used as
-// a parameter to template the output files.
-func (p *Project) Name() string {
-	return fmt.Sprintf("%s-%s", p.Type.Identifier, filepath.Base(p.Path))
-}
-
-// FindProjects searches the repo root to locate project directories and builds
-// `Project`s from them. It will return an error if multiple projects were
-// detected with the same basename and type.
-func FindProjects(types []ProjectType, repoRoot string) ([]Project, error) {
-	projects, err := findProjects(types, repoRoot, repoRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Slice(projects, func(i, j int) bool {
-		pi, pj := projects[i], projects[j]
-		return pi.Type.Identifier < pj.Type.Identifier && pi.Name() < pj.Name()
-	})
-
-	for i := range projects[:len(projects)-1] {
-		pi, pj := projects[i], projects[i+1]
-		if pi.Type.Identifier == pj.Type.Identifier && pi.Name() == pj.Name() {
-			return nil, fmt.Errorf(
-				"duplicate projects detected: '%s' and '%s': two projects "+
-					"may not share the same basename and project type",
-				pi.Path,
-				pj.Path,
-			)
-		}
-	}
-
-	return projects, nil
-}
-
-// findProjects is a recursive helper for `FindProjects`.
-func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var projects []Project
-	for _, file := range files {
-		if file.IsDir() {
-			ps, err := findProjects(
-				types,
-				root,
-				filepath.Join(dir, file.Name()),
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			projects = append(projects, ps...)
-			continue
-		}
-
-		for i, projectType := range types {
-			if file.Name() == projectType.KeyFile {
-				path, err := filepath.Rel(root, dir)
-				if err != nil {
-					return nil, err
-				}
-
-				projects = append(
-					projects,
-					Project{
-						Type: &types[i],
-						Path: path,
-					},
-				)
-			}
-		}
-	}
-
-	return projects, nil
-}
 
 func findRepoRoot(dir string) (string, error) {
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
@@ -239,16 +50,11 @@ func main() {
 		dir = os.Args[1]
 	}
 
-	// Collect the projects from the repository
-	projects, err := FindProjects(projectTypes, repoRoot)
-	if err != nil {
-		fatal("Collecting projects: %v", err)
+	// Build and render project workflow files
+	if err := projects.RenderProjectWorkflows(projectTypes, repoRoot, tmpDir); err != nil {
+		fatal("Render project workflows: %v", err)
 	}
-
-	// Assemble and render the workflow files
-	if err := Render(tmpDir, MaterializeWorkflows(projects)); err != nil {
-		fatal("rendering workflows: %v", err)
-	}
+	success("Staged project workflows")
 
 	// Render the static files
 	for fileName, contents := range staticFiles {
@@ -290,20 +96,20 @@ func makeTemplate(name, body string) *template.Template {
 	)
 }
 
-var projectTypes = []ProjectType{
+var projectTypes = []projects.ProjectType{
 	{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
-		Workflows: [WorkflowMax][]JobType{
-			WorkflowPullRequest: {golangTestJobType, golangLintJobType},
-			WorkflowMerge:       {golangTestJobType, golangLintJobType},
+		Workflows: [projects.WorkflowMax][]projects.JobType{
+			projects.WorkflowPullRequest: {golangTestJobType, golangLintJobType},
+			projects.WorkflowMerge:       {golangTestJobType, golangLintJobType},
 		},
 	},
 	{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
-		Workflows: [WorkflowMax][]JobType{
-			WorkflowPullRequest: {
+		Workflows: [projects.WorkflowMax][]projects.JobType{
+			projects.WorkflowPullRequest: {
 				{
 					Name: "plan",
 					Template: makeTemplate(
@@ -328,7 +134,7 @@ var projectTypes = []ProjectType{
 					),
 				},
 			},
-			WorkflowMerge: {
+			projects.WorkflowMerge: {
 				{
 					Name: "apply",
 					Template: makeTemplate(
@@ -360,7 +166,7 @@ var projectTypes = []ProjectType{
 	},
 }
 
-var golangLintJobType = JobType{
+var golangLintJobType = projects.JobType{
 	Name: "lint",
 	Template: makeTemplate(
 		"lint",
@@ -382,7 +188,7 @@ var golangLintJobType = JobType{
 	),
 }
 
-var golangTestJobType = JobType{
+var golangTestJobType = projects.JobType{
 	Name: "test",
 	Template: makeTemplate(
 		"test",

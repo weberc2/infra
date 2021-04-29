@@ -1,0 +1,122 @@
+package projects
+
+import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"sort"
+)
+
+// Project represents a project in a repository. Each project has a type (see
+// `ProjectType` for more information) and a path (relative to the repo root).
+type Project struct {
+	// Type is the type of a project. It is used to render the final output
+	// files associated with this project into the `~/.github/workflows`
+	// directory.
+	Type *ProjectType
+
+	// Path is the path to the project directory relative to the root of the
+	// repository. The "name" of the project is the basename of the path
+	// prefixed by the project's type identifier (see
+	// `ProjectType.Identifier`).
+	Path string
+}
+
+// Name returns the name of the project by appending the basename of the
+// project's `Path` with the project's type's identifier. This will be used as
+// a parameter to template the output files.
+func (p *Project) Name() string {
+	return fmt.Sprintf("%s-%s", p.Type.Identifier, filepath.Base(p.Path))
+}
+
+// FindProjects searches the repo root to locate project directories and builds
+// `Project`s from them. It will return an error if multiple projects were
+// detected with the same basename and type.
+func FindProjects(types []ProjectType, repoRoot string) ([]Project, error) {
+	projects, err := findProjects(types, repoRoot, repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(projects, func(i, j int) bool {
+		pi, pj := projects[i], projects[j]
+		return pi.Type.Identifier < pj.Type.Identifier && pi.Name() < pj.Name()
+	})
+
+	for i := range projects[:len(projects)-1] {
+		pi, pj := projects[i], projects[i+1]
+		if pi.Type.Identifier == pj.Type.Identifier && pi.Name() == pj.Name() {
+			return nil, fmt.Errorf(
+				"duplicate projects detected: '%s' and '%s': two projects "+
+					"may not share the same basename and project type",
+				pi.Path,
+				pj.Path,
+			)
+		}
+	}
+
+	return projects, nil
+}
+
+// findProjects is a recursive helper for `FindProjects`.
+func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var projects []Project
+	for _, file := range files {
+		if file.IsDir() {
+			ps, err := findProjects(
+				types,
+				root,
+				filepath.Join(dir, file.Name()),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			projects = append(projects, ps...)
+			continue
+		}
+
+		for i, projectType := range types {
+			if file.Name() == projectType.KeyFile {
+				path, err := filepath.Rel(root, dir)
+				if err != nil {
+					return nil, err
+				}
+
+				projects = append(
+					projects,
+					Project{
+						Type: &types[i],
+						Path: path,
+					},
+				)
+			}
+		}
+	}
+
+	return projects, nil
+}
+
+// RenderProjectWorkflows collects projects in the repository, builds workflows,
+// and writes workflow YAML files to disk at `outDir`.
+func RenderProjectWorkflows(
+	projectTypes []ProjectType,
+	repoRoot string,
+	outDir string,
+) error {
+	projects, err := FindProjects(projectTypes, repoRoot)
+	if err != nil {
+		return fmt.Errorf("Collecting projects: %w", err)
+	}
+
+	if err := Render(outDir, MaterializeWorkflows(projects)); err != nil {
+		return fmt.Errorf("Rendering workflows: %w", err)
+	}
+
+	return nil
+}
