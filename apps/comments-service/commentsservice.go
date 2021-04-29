@@ -33,7 +33,7 @@ func (cs *CommentsService) PutComment(comment *Comment) error {
 		Body:      "Hello, world!",
 	})
 	if err != nil {
-		return fmt.Errorf("Marshaling comment into dynamodb item: %w", err)
+		return fmt.Errorf("marshaling comment into dynamodb item: %w", err)
 	}
 	_, err = cs.DB.PutItem(&dynamodb.PutItemInput{
 		Item:      item,
@@ -55,17 +55,17 @@ func (cs *CommentsService) PostComments(postID string) ([]Comment, error) {
 		TableName:                 aws.String(cs.Table),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Querying comments: %w", err)
+		return nil, fmt.Errorf("querying comments: %w", err)
 	}
 
 	comments := make([]Comment, len(out.Items))
 	for i, item := range out.Items {
-		if err := dynamodbattribute.ConvertFromMap(
+		if err := dynamodbattribute.UnmarshalMap(
 			item,
 			&comments[i],
 		); err != nil {
 			return nil, fmt.Errorf(
-				"Failed to unmarshal dynamodb item into a comment: %w",
+				"failed to unmarshal dynamodb item into a comment: %w",
 				err,
 			)
 		}

@@ -73,32 +73,4 @@ func main() {
 
 		return log.Response(http.StatusCreated, ""), nil
 	})
-
-	// postID := "some-post.html"
-	// if err := commentsService.PutComment(&Comment{
-	// 	ID:        uuid.NewString(),
-	// 	PostID:    postID,
-	// 	Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-	// 	Username:  "weberc2",
-	// 	Body:      "Hello, world!",
-	// }); err != nil {
-	// 	log.Fatalf("Error putting comment: %v", err)
-	// }
-
-	// comments, err := commentsService.PostComments(postID)
-	// if err != nil {
-	// 	log.Fatalf("Listing comments for post '%s': %v", postID, err)
-	// }
-
-	// for _, comment := range comments {
-	// 	jsonPrettyPrint(comment)
-	// }
-}
-
-func jsonPrettyPrint(v interface{}) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to marshal '%#v' into json: %v", v, err))
-	}
-	fmt.Printf("%s\n", data)
 }
