@@ -369,6 +369,8 @@ var golangLintJobType = JobType{
   steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
+	- name: Fetch golint
+	  run: (cd {{ .Path }} && go get golang.org/x/lint)
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.

@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+      - name: Fetch golint
+        run: (cd apps/comments-service && go get golang.org/x/lint)
       - name: Lint
         # Evidently we can't 'go test apps/comments-service/...' or the go tool will
         # search GOPATH instead of the module at apps/comments-service.
@@ -40,6 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+      - name: Fetch golint
+        run: (cd scripts/generate-workflows && go get golang.org/x/lint)
       - name: Lint
         # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
         # search GOPATH instead of the module at scripts/generate-workflows.
