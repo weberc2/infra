@@ -26,24 +26,24 @@ func main() {
 		event events.APIGatewayV2HTTPRequest,
 	) (events.APIGatewayV2HTTPResponse, error) {
 		log := requestLogger(event.RequestContext.RequestID)
-		log.Info(map[string]interface{}{
+		log.info(map[string]interface{}{
 			"message": "Received new request",
 			"http":    event.RequestContext.HTTP,
 		})
 
 		if event.RequestContext.Authorizer == nil {
-			return log.InternalServerError("Missing authorizer information"), nil
+			return log.internalServerError("Missing authorizer information"), nil
 		}
 
 		if event.RequestContext.Authorizer.JWT == nil {
-			return log.InternalServerError(
+			return log.internalServerError(
 				"Wrong authorizer type: missing JWT authorizer information",
 			), nil
 		}
 
 		username, ok := event.RequestContext.Authorizer.JWT.Claims["username"]
 		if !ok {
-			return log.InternalServerError("Missing username claim"), nil
+			return log.internalServerError("Missing username claim"), nil
 		}
 
 		var comment struct {
@@ -52,7 +52,7 @@ func main() {
 		}
 
 		if err := json.Unmarshal([]byte(event.Body), &comment); err != nil {
-			return log.BadRequest(fmt.Sprintf(
+			return log.badRequest(fmt.Sprintf(
 				"Error unmarshalling comment: %v",
 				err,
 			)), nil
@@ -65,12 +65,12 @@ func main() {
 			Username:  username,
 			Body:      comment.Body,
 		}); err != nil {
-			return log.InternalServerError(
+			return log.internalServerError(
 				"Writing comment to database: %v",
 				err,
 			), nil
 		}
 
-		return log.Response(http.StatusCreated, ""), nil
+		return log.response(http.StatusCreated, ""), nil
 	})
 }
