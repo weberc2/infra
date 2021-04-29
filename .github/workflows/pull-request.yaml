@@ -5,74 +5,104 @@ on:
 
 jobs:
 
-golang-comments-service-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-    - name: Test
-      # Evidently we can't 'go test apps/comments-service/...' or the go tool will
-      # search GOPATH instead of the module at apps/comments-service.
-      run: cd apps/comments-service && go test -v ./...
+  golang-comments-service-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Test
+        # Evidently we can't 'go test apps/comments-service/...' or the go tool will
+        # search GOPATH instead of the module at apps/comments-service.
+        run: cd apps/comments-service && go test -v ./...
   
-golang-generate-workflows-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-    - name: Test
-      # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
-      # search GOPATH instead of the module at scripts/generate-workflows.
-      run: cd scripts/generate-workflows && go test -v ./...
+  golang-comments-service-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Fetch golint
+        run: |
+          export GOBIN=$PWD/apps/comments-service/bin
+          echo "GOBIN=$GOBIN" >> $GITHUB_ENV
+          (cd apps/comments-service && go get golang.org/x/lint/golint)
+      - name: Lint
+        # Evidently we can't 'go test apps/comments-service/...' or the go tool will
+        # search GOPATH instead of the module at apps/comments-service.
+        run: (cd apps/comments-service && $GOBIN/golint -set_exit_status .)
   
-terraformtarget-bootstrap-plan-check:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - name: Terraform setup
-      uses: hashicorp/setup-terraform@v1
-    - name: Terraform init
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/bootstrap init
-    - name: Terraform plan
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/bootstrap plan
+  golang-generate-workflows-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Test
+        # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
+        # search GOPATH instead of the module at scripts/generate-workflows.
+        run: cd scripts/generate-workflows && go test -v ./...
   
-terraformtarget-lambda-plan-check:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - name: Terraform setup
-      uses: hashicorp/setup-terraform@v1
-    - name: Terraform init
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/lambda init
-    - name: Terraform plan
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/lambda plan
+  golang-generate-workflows-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: Fetch golint
+        run: |
+          export GOBIN=$PWD/scripts/generate-workflows/bin
+          echo "GOBIN=$GOBIN" >> $GITHUB_ENV
+          (cd scripts/generate-workflows && go get golang.org/x/lint/golint)
+      - name: Lint
+        # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
+        # search GOPATH instead of the module at scripts/generate-workflows.
+        run: (cd scripts/generate-workflows && $GOBIN/golint -set_exit_status .)
   
-terraformtarget-remote-state-test-plan-check:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - name: Terraform setup
-      uses: hashicorp/setup-terraform@v1
-    - name: Terraform init
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/remote-state-test init
-    - name: Terraform plan
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-      run: terraform -chdir=targets/remote-state-test plan
+  terraformtarget-bootstrap-plan-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/bootstrap init
+      - name: Terraform plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/bootstrap plan
+  
+  terraformtarget-lambda-plan-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/lambda init
+      - name: Terraform plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/lambda plan
+  
+  terraformtarget-remote-state-test-plan-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/remote-state-test init
+      - name: Terraform plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform -chdir=targets/remote-state-test plan
   

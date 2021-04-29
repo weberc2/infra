@@ -7,11 +7,13 @@ import (
 	"strings"
 )
 
+// Render renders workflows into workflow YAML files in the provided output
+// directory.
 func Render(outDir string, workflows Workflows) error {
 	for workflow, jobs := range workflows {
 		workflow := WorkflowIdentifier(workflow)
 		if err := RenderWorkflow(outDir, workflow, jobs); err != nil {
-			return fmt.Errorf("Rendering workflow %s: %w", workflow, err)
+			return fmt.Errorf("rendering workflow %s: %w", workflow, err)
 		}
 		success("Staged %s", workflow.FileName())
 	}
@@ -19,6 +21,8 @@ func Render(outDir string, workflows Workflows) error {
 	return nil
 }
 
+// RenderWorkflow renders a single workflow into a workflow YAML file in the
+// provided output directory.
 func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) error {
 	filePath := filepath.Join(outDir, workflow.FileName())
 	return withFileCreate(
@@ -41,7 +45,7 @@ func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) erro
 				}
 				if err := renderJob(file, &jobs[i]); err != nil {
 					return fmt.Errorf(
-						"Rendering job '%s' in workflow '%s': %w",
+						"rendering job '%s' in workflow '%s': %w",
 						jobs[i].Name,
 						workflow,
 						err,
@@ -73,7 +77,7 @@ func renderJob(file *os.File, job *Job) error {
 	// If we indented any previously empty lines, unindent them.
 	contents = strings.ReplaceAll(contents, "\n  \n", "\n\n")
 
-	_, err := file.WriteString(contents)
+	_, err := file.WriteString("  " + contents)
 	return err
 }
 

@@ -11,19 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
+// Comment represents a comment.
 type Comment struct {
-	ID        string `json:"id"`
-	PostID    string `json:"post_id"`
+	// ID identifies a comment within a particular site.
+	ID string `json:"id"`
+
+	// PostID identifies the post with which the comment is associated.
+	PostID string `json:"post_id"`
+
+	// Timestamp marks the time at which the comment was originally published.
+	// The format is ISO-8601.  The equivalent Go `time` layout string is
+	// `time.RFC3339Nano`.
 	Timestamp string `json:"timestamp"`
-	Username  string `json:"username"`
-	Body      string `json:"body"`
+
+	// Username identifies the user associated with the comment.
+	Username string `json:"username"`
+
+	// Body holds the body of the comment.
+	Body string `json:"body"`
 }
 
+// CommentsService is a client for CRUDing comments.
 type CommentsService struct {
-	DB    *dynamodb.DynamoDB
+	// DB is a dynamodb client.
+	DB *dynamodb.DynamoDB
+
+	// Table is the name of the dynamodb comments table.
 	Table string
 }
 
+// PutComment inserts a comment into the comments table.
 func (cs *CommentsService) PutComment(comment *Comment) error {
 	item, err := dynamodbattribute.MarshalMap(Comment{
 		ID:        uuid.NewString(),
@@ -33,7 +50,7 @@ func (cs *CommentsService) PutComment(comment *Comment) error {
 		Body:      "Hello, world!",
 	})
 	if err != nil {
-		return fmt.Errorf("Marshaling comment into dynamodb item: %w", err)
+		return fmt.Errorf("marshaling comment into dynamodb item: %w", err)
 	}
 	_, err = cs.DB.PutItem(&dynamodb.PutItemInput{
 		Item:      item,
@@ -42,6 +59,7 @@ func (cs *CommentsService) PutComment(comment *Comment) error {
 	return err
 }
 
+// PostComments retrieves the comments associated with a particular post.
 func (cs *CommentsService) PostComments(postID string) ([]Comment, error) {
 	expr, err := expression.NewBuilder().WithFilter(expression.Name("post_id").Equal(expression.Value(postID))).Build()
 	if err != nil {
@@ -55,17 +73,17 @@ func (cs *CommentsService) PostComments(postID string) ([]Comment, error) {
 		TableName:                 aws.String(cs.Table),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Querying comments: %w", err)
+		return nil, fmt.Errorf("querying comments: %w", err)
 	}
 
 	comments := make([]Comment, len(out.Items))
 	for i, item := range out.Items {
-		if err := dynamodbattribute.ConvertFromMap(
+		if err := dynamodbattribute.UnmarshalMap(
 			item,
 			&comments[i],
 		); err != nil {
 			return nil, fmt.Errorf(
-				"Failed to unmarshal dynamodb item into a comment: %w",
+				"failed to unmarshal dynamodb item into a comment: %w",
 				err,
 			)
 		}
