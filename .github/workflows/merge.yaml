@@ -15,6 +15,22 @@ golang-comments-service-test:
       # search GOPATH instead of the module at apps/comments-service.
       run: cd apps/comments-service && go test -v ./...
   
+golang-comments-service-lint:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+    - name: Install staticcheck
+      run: |
+        set -eo pipefail
+        curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
+        tar -xvf ./staticcheck_linux_amd64.tar.gz
+        staticCheck="$PWD/staticcheck/staticcheck"
+    - name: Lint
+      # Evidently we can't 'go test apps/comments-service/...' or the go tool will
+      # search GOPATH instead of the module at apps/comments-service.
+      run: (cd apps/comments-service && $staticCheck)
+  
 golang-generate-workflows-test:
   runs-on: ubuntu-latest
   steps:
@@ -24,6 +40,22 @@ golang-generate-workflows-test:
       # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
       # search GOPATH instead of the module at scripts/generate-workflows.
       run: cd scripts/generate-workflows && go test -v ./...
+  
+golang-generate-workflows-lint:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+    - name: Install staticcheck
+      run: |
+        set -eo pipefail
+        curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
+        tar -xvf ./staticcheck_linux_amd64.tar.gz
+        staticCheck="$PWD/staticcheck/staticcheck"
+    - name: Lint
+      # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
+      # search GOPATH instead of the module at scripts/generate-workflows.
+      run: (cd scripts/generate-workflows && $staticCheck)
   
 apply:
   runs-on: ubuntu-latest

@@ -287,18 +287,8 @@ var projectTypes = []ProjectType{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
 		Workflows: [WorkflowMax][]JobType{
-			WorkflowPullRequest: {
-				{
-					Name:     "test",
-					Template: golangTestTemplate,
-				},
-			},
-			WorkflowMerge: {
-				{
-					Name:     "test",
-					Template: golangTestTemplate,
-				},
-			},
+			WorkflowPullRequest: {golangTestJobType, golangLintJobType},
+			WorkflowMerge:       {golangTestJobType, golangLintJobType},
 		},
 	},
 	{
@@ -362,9 +352,34 @@ steps:
 	},
 }
 
-var golangTestTemplate = makeTemplate(
-	"test",
-	`{{ .Name }}-test:
+var golangLintJobType = JobType{
+	Name: "lint",
+	Template: makeTemplate(
+		"lint",
+		`{{ .Name }}-lint:
+runs-on: ubuntu-latest
+steps:
+  - uses: actions/checkout@v2
+  - uses: actions/setup-go@v2
+  - name: Install staticcheck
+    run: |
+	  set -eo pipefail
+	  curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
+	  tar -xvf ./staticcheck_linux_amd64.tar.gz
+	  staticCheck="$PWD/staticcheck/staticcheck"
+  - name: Lint
+    # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+    # search GOPATH instead of the module at {{ .Path }}.
+    run: (cd {{ .Path }} && $staticCheck)
+`,
+	),
+}
+
+var golangTestJobType = JobType{
+	Name: "test",
+	Template: makeTemplate(
+		"test",
+		`{{ .Name }}-test:
 runs-on: ubuntu-latest
 steps:
   - uses: actions/checkout@v2
@@ -374,7 +389,8 @@ steps:
     # search GOPATH instead of the module at {{ .Path }}.
     run: cd {{ .Path }} && go test -v ./...
 `,
-)
+	),
+}
 
 var staticFiles = map[string]string{
 	"terraform-fmt.yaml": `name: Terraform format check
