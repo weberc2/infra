@@ -301,21 +301,21 @@ var projectTypes = []ProjectType{
 					Template: makeTemplate(
 						"plan",
 						`{{ .Name }}-plan-check:
-runs-on: ubuntu-latest
-steps:
-  - uses: actions/checkout@v2
-  - name: Terraform setup
-    uses: hashicorp/setup-terraform@v1
-  - name: Terraform init
-    env:
-      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-    run: terraform -chdir={{ .Path }} init
-  - name: Terraform plan
-    env:
-      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-    run: terraform -chdir={{ .Path }} plan
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - name: Terraform setup
+      uses: hashicorp/setup-terraform@v1
+    - name: Terraform init
+      env:
+        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+      run: terraform -chdir={{ .Path }} init
+    - name: Terraform plan
+      env:
+        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+      run: terraform -chdir={{ .Path }} plan
 `,
 					),
 				},
@@ -326,24 +326,24 @@ steps:
 					Template: makeTemplate(
 						"apply",
 						`apply:
-runs-on: ubuntu-latest
-steps:
-  - name: Checkout
-    uses: actions/checkout@v2
-  - name: Terraform setup
-    uses: hashicorp/setup-terraform@v1
-  - name: Terraform init {{ .Name }}
-    id: init-{{ .Name }}
-    env:
-      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-    run: terraform -chdir={{ .Path }} init
-  - name: Terraform apply {{ .Name }}
-    id: apply-{{ .Name }}
-    env:
-      AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-      AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-    run: terraform -chdir={{ .Path }} apply -auto-approve
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Terraform setup
+      uses: hashicorp/setup-terraform@v1
+    - name: Terraform init {{ .Name }}
+      id: init-{{ .Name }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+      run: terraform -chdir={{ .Path }} init
+    - name: Terraform apply {{ .Name }}
+      id: apply-{{ .Name }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
+        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
+      run: terraform -chdir={{ .Path }} apply -auto-approve
 `,
 					),
 				},
@@ -357,20 +357,20 @@ var golangLintJobType = JobType{
 	Template: makeTemplate(
 		"lint",
 		`{{ .Name }}-lint:
-runs-on: ubuntu-latest
-steps:
-  - uses: actions/checkout@v2
-  - uses: actions/setup-go@v2
-  - name: Install staticcheck
-    run: |
-	  set -eo pipefail
-	  curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
-	  tar -xvf ./staticcheck_linux_amd64.tar.gz
-	  staticCheck="$PWD/staticcheck/staticcheck"
-  - name: Lint
-    # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
-    # search GOPATH instead of the module at {{ .Path }}.
-    run: (cd {{ .Path }} && $staticCheck)
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+    - name: Install staticcheck
+      run: |
+  	  set -eo pipefail
+  	  curl -LO https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
+  	  tar -xvf ./staticcheck_linux_amd64.tar.gz
+  	  staticCheck="$PWD/staticcheck/staticcheck"
+    - name: Lint
+      # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+      # search GOPATH instead of the module at {{ .Path }}.
+      run: (cd {{ .Path }} && $staticCheck)
 `,
 	),
 }
@@ -380,14 +380,14 @@ var golangTestJobType = JobType{
 	Template: makeTemplate(
 		"test",
 		`{{ .Name }}-test:
-runs-on: ubuntu-latest
-steps:
-  - uses: actions/checkout@v2
-  - uses: actions/setup-go@v2
-  - name: Test
-    # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
-    # search GOPATH instead of the module at {{ .Path }}.
-    run: cd {{ .Path }} && go test -v ./...
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+    - name: Test
+      # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
+      # search GOPATH instead of the module at {{ .Path }}.
+      run: cd {{ .Path }} && go test -v ./...
 `,
 	),
 }

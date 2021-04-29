@@ -73,7 +73,7 @@ func renderJob(file *os.File, job *Job) error {
 	// If we indented any previously empty lines, unindent them.
 	contents = strings.ReplaceAll(contents, "\n  \n", "\n\n")
 
-	_, err := file.WriteString(contents)
+	_, err := file.WriteString("  " + contents)
 	return err
 }
 
