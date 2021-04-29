@@ -139,7 +139,7 @@ func FindProjects(types []ProjectType, repoRoot string) ([]Project, error) {
 		pi, pj := projects[i], projects[i+1]
 		if pi.Type.Identifier == pj.Type.Identifier && pi.Name() == pj.Name() {
 			return nil, fmt.Errorf(
-				"Duplicate projects detected: '%s' and '%s': Two projects "+
+				"duplicate projects detected: '%s' and '%s': two projects "+
 					"may not share the same basename and project type",
 				pi.Path,
 				pj.Path,

@@ -11,7 +11,7 @@ func Render(outDir string, workflows Workflows) error {
 	for workflow, jobs := range workflows {
 		workflow := WorkflowIdentifier(workflow)
 		if err := RenderWorkflow(outDir, workflow, jobs); err != nil {
-			return fmt.Errorf("Rendering workflow %s: %w", workflow, err)
+			return fmt.Errorf("rendering workflow %s: %w", workflow, err)
 		}
 		success("Staged %s", workflow.FileName())
 	}
@@ -41,7 +41,7 @@ func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) erro
 				}
 				if err := renderJob(file, &jobs[i]); err != nil {
 					return fmt.Errorf(
-						"Rendering job '%s' in workflow '%s': %w",
+						"rendering job '%s' in workflow '%s': %w",
 						jobs[i].Name,
 						workflow,
 						err,
