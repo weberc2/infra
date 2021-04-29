@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,7 +9,62 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/fatih/color"
 )
+
+// NOTES:
+// * Our golang-lambda project type needs to be able to say that it needs a
+//   golang-publish project type. Specifically it needs to be able to build
+//   a 'deploy' job that depends on the 'golang-publish' job's 'publish' job.
+// * What part of the golang-lambda project type knows that the 'deploy' job
+//   depends on the golang-publish.publish job?
+// * Maybe a JobType says it needs dependencies of a particular
+//   "golang-publish.publish" job type and the ProjectType contains the
+//   information which routes its `golang-publish` dependency's `publish`
+//   JobType
+
+// Workflow represents the workflows in the repo.
+type WorkflowIdentifier int
+
+const (
+	// WorkflowPullRequest identifies the pull request workflow.
+	WorkflowIdentifierPullRequest WorkflowIdentifier = iota
+
+	// WorkflowMerge identifies the merge workflow.
+	WorkflowIdentifierMerge
+)
+
+// String returns the string-representation of a `WorkflowIdentifier`.
+func (wid WorkflowIdentifier) String() string {
+	switch wid {
+	case WorkflowIdentifierPullRequest:
+		return "pull_request"
+	case WorkflowIdentifierMerge:
+		return "merge"
+	default:
+		panic(fmt.Sprintf("Invalid workflow: %d", w))
+	}
+}
+
+// JobType represents a job in a workflow. Given a `Project`, it can be used to
+// instantiate concrete jobs in a workflow.
+type JobType struct {
+	// Identifier is the name of the job. It typically should contain
+	// `${project}`, which will be interpolated with the name of the project
+	// at rendering time.
+	Identifier string
+
+	Dependencies []*JobType
+
+	// Workflow identifies the workflow to which jobs of this type belong.
+	Workflow WorkflowIdentifier
+
+	// Template is the text template that will be used to render a project into
+	// a concrete job. See `ProjectTemplateParams` for the parameters available
+	// to the template.
+	Template *template.Template
+}
 
 // Since projects can live in any directory in the repo, but since we take the
 // basename of the project directory as the project name, it is possible that
@@ -43,32 +97,41 @@ type ProjectType struct {
 	// multiple types.
 	KeyFile string
 
-	// Templates is the collection of text templates which will be rendered for
-	// a given project of this project type. The name of the template will be
-	// rendered as the name of the output file. The template name should
-	// include the substring `${project}` which will be interpolated with the
-	// name of the project in question when the output file is rendered into
-	// the `~/.github/workflows` directory. The templates themselves may
-	// reference `{{ .Project }}` which will be interpolated with the project
-	// name. NOTE: All template names should end with `.yaml`.
-	Templates []*template.Template
+	Assignments []JobTypeAssignment
+
+	Dependencies []*ProjectType
+
+	// JobType contains a list of job types associated with the project type.
+	Jobs []JobType
 }
 
-func (pt *ProjectType) ValidateTemplateNames() error {
-	for _, template := range pt.Templates {
-		if name := template.Name(); !strings.HasSuffix(name, ".yaml") {
-			return fmt.Errorf(
-				"Template '%s' doesn't have `.yaml` suffix",
-				name,
-			)
-		}
+// JobTypeAssignment expresses the equivalency:
+// Source.Jobs[TargetJobIndex].Dependencies[TargetJobIndex] = Source.Dependencies[DependencyIndex].Jobs[DependencyJobIndex]
+// From which we can validate that this expression is type-safe (both sides
+// have the same type)
+type JobTypeAssignment struct {
+	DependencyIndex          int // The index of the dependency in Source.Dependencies
+	DependencyJobIndex       int // The index of the job on the Dependency
+	TargetJobIndex           int // The index of the job on the source onto which the dependency job will be mapped
+	TargetJobDependencyIndex int // the dependency slot on the target job onto which the
+	DependencySlot           int // The slot on the job on the dependency onto which the
+}
+
+func (pt *ProjectType) Jobs(project *Project) []Job {
+	jobs := make([]Job, len(pt.Jobs))
+	for i, jobType := range pt.Jobs {
+		jobs[i].Dependencies = make([]string, len(jobType.Dependencies))
 	}
-	return nil
+
+	for _, assignment := range pt.Assignments {
+		var dependencyProjectType *ProjectType = pt.Dependencies[assignment.DependencyIndex]
+		var dependencyJobType *JobType = &dependencyProjectType.Jobs[assignment.DependencyJobIndex]
+		var job *Job = &jobs[assignment.TargetJobIndex]
+		job.Dependencies[assignment.DependencySlot] = project.Dependencies
+	}
 }
 
-// Project represents a project in a repository. Each project has a type (see
-// `ProjectType` for more information) and a path (relative to the repo root).
-type Project struct {
+type ProjectIdentifier struct {
 	// Type is the type of a project. It is used to render the final output
 	// files associated with this project into the `~/.github/workflows`
 	// directory.
@@ -84,14 +147,33 @@ type Project struct {
 // Name returns the name of the project by appending the basename of the
 // project's `Path` with the project's type's identifier. This will be used as
 // a parameter to template the output files.
-func (p *Project) Name() string {
-	return fmt.Sprintf("%s-%s", p.Type.Identifier, filepath.Base(p.Path))
+func (pi *ProjectIdentifier) Name() string {
+	return fmt.Sprintf("%s-%s", pi.Type.Identifier, filepath.Base(pi.Path))
+}
+
+type Job struct {
+	Identifier   string
+	ProjectName  string
+	ProjectPath  string
+	Dependencies []string
+	Template     *template.Template
+}
+
+// Project represents a project in a repository. Each project has a type (see
+// `ProjectType` for more information) and a path (relative to the repo root).
+type Project struct {
+	ProjectIdentifier
+
+	// Dependencies holds a list of names of other projects. See
+	// `Project.Name()` for details on the structure/syntax of a project name.
+	Dependencies []*Project
 }
 
 func (p *Project) renderTemplates(dir string) error {
 	for _, template := range p.Type.Templates {
 		fileName := strings.Replace(template.Name(), "${project}", p.Name(), -1)
 		filePath := filepath.Join(dir, fileName)
+		dependencies := make([]string, len(p.Dependencies))
 		if err := func() error {
 			file, err := os.Create(filePath)
 			if err != nil {
@@ -99,10 +181,7 @@ func (p *Project) renderTemplates(dir string) error {
 			}
 			defer file.Close()
 
-			return template.Execute(file, struct {
-				Name string
-				Path string
-			}{
+			return template.Execute(file, ProjectTemplateParams{
 				Name: p.Name(),
 				Path: p.Path,
 			})
@@ -305,6 +384,11 @@ func makeTemplate(name, body string) *template.Template {
 }
 
 var projectTypes = []ProjectType{
+	ProjectType{
+		Identifier: "golanglambdasource",
+		KeyFile:    "golang-lambda-source.yaml",
+		Templates:  []*template.Template{},
+	},
 	ProjectType{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
