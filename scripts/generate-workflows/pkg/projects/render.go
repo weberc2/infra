@@ -1,4 +1,4 @@
-package main
+package projects
 
 import (
 	"fmt"
@@ -15,7 +15,6 @@ func Render(outDir string, workflows Workflows) error {
 		if err := RenderWorkflow(outDir, workflow, jobs); err != nil {
 			return fmt.Errorf("rendering workflow %s: %w", workflow, err)
 		}
-		success("Staged %s", workflow.FileName())
 	}
 
 	return nil
