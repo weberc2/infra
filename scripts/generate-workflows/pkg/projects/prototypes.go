@@ -60,6 +60,9 @@ func (wid WorkflowIdentifier) FileName() string {
 	}
 }
 
+// WorkflowTypes maps workflows to the job types associated with the workflow.
+type WorkflowTypes [WorkflowMax][]JobType
+
 // JobType is the template or prototype from which `Job`s are created.  It
 // associates a job name with a text template.
 type JobType struct {
@@ -96,5 +99,5 @@ type ProjectType struct {
 	// the workflow for which they're intended.  Namely, the key for the array
 	// is intended to be a `WorkflowIdentifier` whose values are less than
 	// `WorkflowMax`.
-	Workflows [WorkflowMax][]JobType
+	Workflows WorkflowTypes
 }

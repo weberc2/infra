@@ -100,7 +100,7 @@ var projectTypes = []projects.ProjectType{
 	{
 		Identifier: "golang",
 		KeyFile:    "go.mod",
-		Workflows: [projects.WorkflowMax][]projects.JobType{
+		Workflows: projects.WorkflowTypes{
 			projects.WorkflowPullRequest: {golangTestJobType, golangLintJobType},
 			projects.WorkflowMerge:       {golangTestJobType, golangLintJobType},
 		},
@@ -108,7 +108,7 @@ var projectTypes = []projects.ProjectType{
 	{
 		Identifier: "terraformtarget",
 		KeyFile:    "terraform.tf",
-		Workflows: [projects.WorkflowMax][]projects.JobType{
+		Workflows: projects.WorkflowTypes{
 			projects.WorkflowPullRequest: {
 				{
 					Name: "plan",
