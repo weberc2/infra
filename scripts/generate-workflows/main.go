@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/fatih/color"
 
@@ -105,12 +104,6 @@ func entrypoint() error {
 	return nil
 }
 
-func makeTemplate(name, body string) *template.Template {
-	return template.Must(
-		template.New(name).Parse(strings.Replace(body, "\t", "    ", -1)),
-	)
-}
-
 var golangProjectType = projects.ProjectType{
 	Identifier: "golang",
 	Workflows: projects.WorkflowTypes{
@@ -136,22 +129,11 @@ var projectTypes = []projects.ProjectType{
 						Name:     "golang-source-project",
 						JobIndex: 1,
 					}},
-					Template: makeTemplate(
-						"publish",
-						`{{ .Name }}-greet:
-  {{- if .Dependencies }}
-  needs:
-	{{- range .Dependencies }}
-	- {{.}}
-	{{- end }}
-  {{- end }}
-  runs-on: ubuntu-latest
-  steps:
-	- uses: actions/checkout@v2
-	- name: Do something
-	  run: echo "Hello, world!"
-`,
-					),
+					RunsOn: "ubuntu-latest",
+					Steps: []projects.JobStep{
+						{Uses: "actions/checkout@v2"},
+						{Name: "Do something", Run: "echo \"Hello, world!\""},
+					},
 				},
 			},
 			projects.WorkflowMerge: {
@@ -164,22 +146,11 @@ var projectTypes = []projects.ProjectType{
 						Name:     "golang-source-project",
 						JobIndex: 1,
 					}},
-					Template: makeTemplate(
-						"publish",
-						`{{ .Name }}-publish:
-  {{- if .Dependencies }}
-  needs:
-	{{- range .Dependencies }}
-	- {{.}}
-	{{- end }}
-  {{- end }}
-  runs-on: ubuntu-latest
-  steps:
-	- uses: actions/checkout@v2
-	- name: Do something
-	  run: echo "Hello, world!"
-`,
-					),
+					RunsOn: "ubuntu-latest",
+					Steps: []projects.JobStep{
+						{Uses: "actions/checkout@v2"},
+						{Name: "Do something", Run: "echo \"Hello, world!\""},
+					},
 				},
 			},
 		},
@@ -190,55 +161,54 @@ var projectTypes = []projects.ProjectType{
 		Workflows: projects.WorkflowTypes{
 			projects.WorkflowPullRequest: {
 				{
-					Name: "plan",
-					Template: makeTemplate(
-						"plan",
-						`{{ .Name }}-plan:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - name: Terraform setup
-      uses: hashicorp/setup-terraform@v1
-    - name: Terraform init
-      env:
-        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-      run: terraform -chdir={{ .Path }} init
-    - name: Terraform plan
-      env:
-        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-      run: terraform -chdir={{ .Path }} plan
-`,
-					),
+					Name:   "plan",
+					RunsOn: "ubuntu-latest",
+					Steps: []projects.JobStep{
+						{Uses: "actions/checkout@v2"},
+						{Name: "Terraform setup", Uses: "hashicorp/setup-terraform@v1"},
+						{
+							Name: "Terraform init",
+							Env: map[string]string{
+								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
+								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
+							},
+							Run: "terraform -chdir={{ .Path }} init",
+						},
+						{
+							Name: "Terraform plan",
+							Env: map[string]string{
+								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
+								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
+							},
+							Run: "terraform -chdir={{ .Path }} plan",
+						},
+					},
 				},
 			},
 			projects.WorkflowMerge: {
 				{
-					Name: "apply",
-					Template: makeTemplate(
-						"apply",
-						`{{ .Name }}-apply:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Terraform setup
-      uses: hashicorp/setup-terraform@v1
-    - name: Terraform init {{ .Name }}
-      id: init-{{ .Name }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-      run: terraform -chdir={{ .Path }} init
-    - name: Terraform apply {{ .Name }}
-      id: apply-{{ .Name }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{"{{"}} secrets.TERRAFORM_AWS_ACCESS_KEY_ID {{"}}"}}
-        AWS_SECRET_ACCESS_KEY: ${{"{{"}} secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY {{"}}"}}
-      run: terraform -chdir={{ .Path }} apply -auto-approve
-`,
-					),
+					Name:   "apply",
+					RunsOn: "ubuntu-latest",
+					Steps: []projects.JobStep{
+						{Uses: "actions/checkout@v2"},
+						{Name: "Terraform setup", Uses: "hashicorp/setup-terraform@v1"},
+						{
+							Name: "Terraform init",
+							Env: map[string]string{
+								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
+								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
+							},
+							Run: "terraform -chdir={{ .Path }} init",
+						},
+						{
+							Name: "Terraform apply",
+							Env: map[string]string{
+								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
+								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
+							},
+							Run: "terraform -chdir={{ .Path }} apply",
+						},
+					},
 				},
 			},
 		},
@@ -246,42 +216,33 @@ var projectTypes = []projects.ProjectType{
 }
 
 var golangLintJobType = projects.JobType{
-	Name: "lint",
-	Template: makeTemplate(
-		"lint",
-		`{{ .Name }}-lint:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-	- name: Fetch golint
-	  run: |
-	    export GOBIN=$PWD/{{ .Path }}/bin
-		echo "GOBIN=$GOBIN" >> $GITHUB_ENV
-	    (cd {{ .Path }} && go get golang.org/x/lint/golint)
-    - name: Lint
-      # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
-      # search GOPATH instead of the module at {{ .Path }}.
-      run: (cd {{ .Path }} && $GOBIN/golint -set_exit_status ./...)
+	Name:   "lint",
+	RunsOn: "ubuntu-latest",
+	Steps: []projects.JobStep{
+		{Uses: "actions/checkout@v2"},
+		{Uses: "actions/setup-go@v2"},
+		{
+			Name: "Fetch golint",
+			Run: `export GOBIN=$PWD/{{ .Path }}/bin
+echo "GOBIN=$GOBIN" >> $GITHUB_ENV
+(cd {{ .Path }} && go get golang.org/x/lint/golint)
 `,
-	),
+		},
+		{
+			Name: "Lint",
+			Run:  "(cd {{ .Path }} && $GOBIN/golint -set_exit_status ./...)",
+		},
+	},
 }
 
 var golangTestJobType = projects.JobType{
-	Name: "test",
-	Template: makeTemplate(
-		"test",
-		`{{ .Name }}-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-    - name: Test
-      # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
-      # search GOPATH instead of the module at {{ .Path }}.
-      run: cd {{ .Path }} && go test -v ./...
-`,
-	),
+	Name:   "test",
+	RunsOn: "ubuntu-latest",
+	Steps: []projects.JobStep{
+		{Uses: "actions/checkout@v2"},
+		{Uses: "actions/setup-go@v2"},
+		{Name: "Test", Run: "(cd {{ .Path }} && go test -v ./...)"},
+	},
 }
 
 var staticFiles = map[string]string{

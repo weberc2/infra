@@ -2,8 +2,17 @@ package projects
 
 import (
 	"fmt"
+	"strings"
 	"text/template"
 )
+
+// JobStep is a step in a job. It
+type JobStep struct {
+	Name string            `yaml:"name,omitempty"`
+	Env  map[string]string `yaml:"env,omitempty"`
+	Run  string            `yaml:"run,omitempty"`
+	Uses string            `yaml:"uses,omitempty"`
+}
 
 // Job represents a concrete GitHub Actions job.  It has everything it needs to
 // be rendered onto a GitHub Actions workflow YAML file.
@@ -21,13 +30,47 @@ type Job struct {
 	// job.
 	ProjectPath string
 
+	// Dependencies is a list of identifiers for jobs which must be completed
+	// before this job can begin.
 	Dependencies []string
 
-	// Template is the text template used to generate the job's YAML.  Note that
-	// the template's source text *should not* be indented, but rather the
-	// output text will be indented automatically before being attached to the
-	// output workflow file.
-	Template *template.Template
+	// RunsOn is the name of the image that the job will run on.
+	RunsOn string
+
+	// Steps defines the steps to run during execution of the job.
+	Steps []JobStep
+}
+
+// MarshalYAML marshals a job into YAML. The resulting YAML satisfies the GitHub
+// Actions `Job` specification.
+func (j *Job) MarshalYAML() (interface{}, error) {
+	var out = struct {
+		Needs  []string  `yaml:"needs,omitempty"`
+		RunsOn string    `yaml:"runs-on,omitempty"`
+		Steps  []JobStep `yaml:"steps,omitempty"`
+	}{
+		Needs:  j.Dependencies,
+		RunsOn: j.RunsOn,
+		Steps:  make([]JobStep, len(j.Steps)),
+	}
+
+	for i, step := range j.Steps {
+		var sb strings.Builder
+		t, err := template.New("").Parse(step.Run)
+		if err != nil {
+			return nil, err
+		}
+		if err := t.Execute(
+			&sb,
+			struct{ Path string }{j.ProjectPath},
+		); err != nil {
+			return nil, err
+		}
+		step.Run = sb.String()
+		out.Steps[i] = step
+	}
+
+	return out, nil
 }
 
 // Workflows is a data structure that associates a list of jobs to a workflow.
@@ -131,7 +174,8 @@ func (m *materializer) materializeJob(
 			ProjectName:  parentProject.Name(),
 			ProjectPath:  parentProject.Path,
 			Dependencies: dependencies,
-			Template:     jobType.Template,
+			RunsOn:       jobType.RunsOn,
+			Steps:        jobType.Steps,
 		},
 	)
 	return m.workflows[workflow][len(m.workflows[workflow])-1], nil

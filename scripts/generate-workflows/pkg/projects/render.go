@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Render renders workflows into workflow YAML files in the provided output
@@ -24,62 +25,32 @@ func Render(outDir string, workflows Workflows) error {
 // provided output directory.
 func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []*Job) error {
 	filePath := filepath.Join(outDir, workflow.FileName())
+	jobMap := make(map[string]*Job, len(jobs))
+	for _, job := range jobs {
+		jobMap[job.Identifier] = job
+	}
 	return withFileCreate(
 		filePath,
 		func(file *os.File) error {
-			if _, err := fmt.Fprintf(file, "name: %s\n", workflow); err != nil {
-				return err
-			}
-			if _, err := fmt.Fprintf(
-				file,
-				"on:\n  %s:\n    branches: [ master ]\n\njobs:\n",
-				workflow.Trigger(),
-			); err != nil {
-				return err
-			}
-
-			for i := range jobs {
-				if _, err := file.WriteString("\n"); err != nil {
-					return err
-				}
-				if err := renderJob(file, jobs[i]); err != nil {
-					return fmt.Errorf(
-						"rendering job '%s' in workflow '%s': %w",
-						jobs[i].Name,
-						workflow,
-						err,
-					)
-				}
-			}
-
-			return nil
+			enc := yaml.NewEncoder(file)
+			enc.SetIndent(2)
+			return enc.Encode(struct {
+				Name string `yaml:"name"`
+				On   map[string]struct {
+					Branches []string `yaml:"branches"`
+				} `yaml:"on"`
+				Jobs map[string]*Job `yaml:"jobs"`
+			}{
+				Name: workflow.String(),
+				On: map[string]struct {
+					Branches []string `yaml:"branches"`
+				}{
+					workflow.Trigger(): {Branches: []string{"master"}},
+				},
+				Jobs: jobMap,
+			})
 		},
 	)
-}
-
-func renderJob(file *os.File, job *Job) error {
-	var writer strings.Builder
-
-	if err := job.Template.Execute(&writer, struct {
-		Name         string
-		Path         string
-		Dependencies []string
-	}{
-		Name:         job.ProjectName,
-		Path:         job.ProjectPath,
-		Dependencies: job.Dependencies,
-	}); err != nil {
-		return err
-	}
-
-	// Indent all lines
-	contents := strings.ReplaceAll(writer.String(), "\n", "\n  ")
-
-	// If we indented any previously empty lines, unindent them.
-	contents = strings.ReplaceAll(contents, "\n  \n", "\n\n")
-
-	_, err := file.WriteString("  " + contents)
-	return err
 }
 
 func withFileCreate(filePath string, f func(f *os.File) error) error {

@@ -2,7 +2,6 @@ package projects
 
 import (
 	"fmt"
-	"text/template"
 )
 
 // WorkflowIdentifier is an enum whose variants identify different workflows.
@@ -86,11 +85,11 @@ type JobType struct {
 	// `ProjectType`.
 	Dependencies []JobTypeDependency
 
-	// Template is the templates which will be rendered for
-	// a given project of this project type. The resulting job name will be
-	// structured `${project.Name()}-${job.Name}`, and it will be rendered onto
-	// the file which corresponds to the job's workflow.
-	Template *template.Template
+	// RunsOn is the name of the image that the job will run on.
+	RunsOn string
+
+	// Steps defines the steps to run during execution of the job.
+	Steps []JobStep
 }
 
 // ProjectType represents a kind of project, e.g., a Go project, a Terraform
