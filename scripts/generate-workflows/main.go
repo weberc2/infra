@@ -158,12 +158,16 @@ output="{{ .Name }}-$(git rev-parse HEAD)"
 go build -o "$output"`,
 						},
 						{
+							Name: "Zip artifact",
+							Run:  "zip \"${output}.zip\" \"$output\"",
+						},
+						{
 							Name: "Publish to S3",
 							Env: map[string]string{
 								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
 								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
 							},
-							Run: `aws s3 cp "$output" "s3://weberc2-code-artifacts/$output"`,
+							Run: `aws s3 cp "${output}.zip" "s3://weberc2-inf-lambda-code-artifacts/${output}.zip"`,
 						},
 					},
 				},
