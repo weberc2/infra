@@ -8,11 +8,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Workflow represents a GitHub Actions workflow.
 type Workflow struct {
+	// Identifier identifies the workflow.
 	Identifier WorkflowIdentifier
-	Jobs       []*Job
+
+	// Jobs are the list of jobs to execute as part of the workflow
+	Jobs []*Job
 }
 
+// MarshalYAML marshals a workflow into valid GitHub Actions Workflow YAML.
 func (w *Workflow) MarshalYAML() (interface{}, error) {
 	jobMap := make([]field, len(w.Jobs))
 	for i, job := range w.Jobs {
@@ -42,10 +47,20 @@ func (w *Workflow) MarshalYAML() (interface{}, error) {
 
 // JobStep is a step in a job's execution.
 type JobStep struct {
-	Name string            `yaml:"name,omitempty"`
-	Env  map[string]string `yaml:"env,omitempty"`
-	Run  string            `yaml:"run,omitempty"`
-	Uses string            `yaml:"uses,omitempty"`
+	// Name is the name of the job step.
+	Name string `yaml:"name,omitempty"`
+
+	// Env is a mapping of environment variables to make available to the job
+	// step.
+	Env map[string]string `yaml:"env,omitempty"`
+
+	// Run is the command to run with the shell.  This can include Go template
+	// variables (e.g., `echo "this is the path: {{ .Path }}`).
+	Run string `yaml:"run,omitempty"`
+
+	// Uses is the 'uses' declaration for the job step.  This is used to invoke
+	// published Actions.
+	Uses string `yaml:"uses,omitempty"`
 }
 
 // Job represents a concrete GitHub Actions job.  It has everything it needs to
