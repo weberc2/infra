@@ -11,6 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type ProjectIdentifier struct {
+	Path string
+	Type *ProjectType
+}
+
 // Project represents a project in a repository. Each project has a type (see
 // `ProjectType` for more information) and a path (relative to the repo root).
 type Project struct {
@@ -24,6 +29,8 @@ type Project struct {
 	// prefixed by the project's type identifier (see
 	// `ProjectType.Identifier`).
 	Path string
+
+	Dependencies map[string]ProjectIdentifier
 }
 
 // Name returns the name of the project by appending the basename of the
@@ -115,7 +122,11 @@ func (pp *projectParser) parseProjectsDirectory(dir string) error {
 	}
 	var payload struct {
 		Projects []struct {
-			Type string `yaml:"type"`
+			Type         string `yaml:"type"`
+			Dependencies map[string]struct {
+				Path string `yaml:"path"`
+				Type string `yaml:"type"`
+			} `yaml:"dependencies"`
 		} `yaml:"projects"`
 	}
 	if err := yaml.Unmarshal(data, &payload); err != nil {
@@ -132,14 +143,43 @@ func (pp *projectParser) parseProjectsDirectory(dir string) error {
 		if err != nil {
 			return err
 		}
+
+		dependencies := make(map[string]ProjectIdentifier, len(project.Dependencies))
+		for dependencyName, dependency := range project.Dependencies {
+			if dependencyType, found := projectType.Dependencies[dependencyName]; found {
+				if dependencyType.Identifier != dependency.Type {
+					return fmt.Errorf(
+						"expected type '%s' for dependency '%s' of "+
+							"(path=%s, type=%s); found type '%s'",
+						dependencyType.Identifier,
+						path,
+						project.Type,
+						dependencyName,
+						dependency.Type,
+					)
+				}
+				dependencies[dependencyName] = ProjectIdentifier{
+					Path: path,
+					Type: dependencyType,
+				}
+				continue
+			}
+			return fmt.Errorf(
+				"Unknown dependency '%s' for project type '%s'",
+				dependencyName,
+				project.Type,
+			)
+		}
+
 		log.Debugf(
 			"adding project (path=%s, type=%s)",
 			path,
 			projectType.Identifier,
 		)
 		pp.pushProject(Project{
-			Type: projectType,
-			Path: path,
+			Type:         projectType,
+			Path:         path,
+			Dependencies: dependencies,
 		})
 	}
 	return nil
@@ -166,7 +206,12 @@ func RenderProjectWorkflows(
 		return fmt.Errorf("Collecting projects: %w", err)
 	}
 
-	if err := Render(outDir, MaterializeWorkflows(projects)); err != nil {
+	workflows, err := MaterializeWorkflows(projects)
+	if err != nil {
+		return fmt.Errorf("Building workflows: %w", err)
+	}
+
+	if err := Render(outDir, workflows); err != nil {
 		return fmt.Errorf("Rendering workflows: %w", err)
 	}
 

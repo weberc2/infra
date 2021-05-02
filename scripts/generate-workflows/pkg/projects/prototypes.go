@@ -60,6 +60,17 @@ func (wid WorkflowIdentifier) FileName() string {
 	}
 }
 
+// JobTypeDependency describes a dependency of a `JobType`.
+type JobTypeDependency struct {
+	// Name is the name of the dependency within a given `ProjectType`.  It is
+	// the key for the `ProjectType.Dependencies` map.
+	Name string
+
+	// JobIndex refers to the index of the job within the dependency's
+	// `ProjectType`.
+	JobIndex int
+}
+
 // WorkflowTypes maps workflows to the job types associated with the workflow.
 type WorkflowTypes [WorkflowMax][]JobType
 
@@ -68,6 +79,8 @@ type WorkflowTypes [WorkflowMax][]JobType
 type JobType struct {
 	// Name is suffixed onto all jobs of this job type.
 	Name string
+
+	Dependencies []JobTypeDependency
 
 	// Template is the templates which will be rendered for
 	// a given project of this project type. The resulting job name will be
@@ -87,6 +100,8 @@ type ProjectType struct {
 	// Identifier will be prepended onto project names to disambiguate between
 	// projects with the same name but different project types.
 	Identifier string
+
+	Dependencies map[string]*ProjectType
 
 	// Workflows holds the `JobType`s associated with this project organized by
 	// the workflow for which they're intended.  Namely, the key for the array

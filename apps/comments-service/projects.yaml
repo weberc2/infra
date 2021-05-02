@@ -1,2 +1,7 @@
 projects:
   - type: golang
+  - type: golanglambda
+    dependencies:
+      golang-source-project:
+        path: apps/comments-service/
+        type: golang

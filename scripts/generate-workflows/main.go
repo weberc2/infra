@@ -111,14 +111,52 @@ func makeTemplate(name, body string) *template.Template {
 	)
 }
 
+var golangProjectType = projects.ProjectType{
+	Identifier: "golang",
+	Workflows: projects.WorkflowTypes{
+		projects.WorkflowPullRequest: {golangTestJobType, golangLintJobType},
+		projects.WorkflowMerge:       {golangTestJobType, golangLintJobType},
+	},
+}
+
 var projectTypes = []projects.ProjectType{
 	{
-		Identifier: "golang",
+		Identifier: "golanglambda",
+		Dependencies: map[string]*projects.ProjectType{
+			"golang-source-project": &golangProjectType,
+		},
 		Workflows: projects.WorkflowTypes{
-			projects.WorkflowPullRequest: {golangTestJobType, golangLintJobType},
-			projects.WorkflowMerge:       {golangTestJobType, golangLintJobType},
+			projects.WorkflowMerge: {
+				{
+					Name: "s3publish",
+					Dependencies: []projects.JobTypeDependency{{
+						Name:     "golang-source-project",
+						JobIndex: 0, // test
+					}, {
+						Name:     "golang-source-project",
+						JobIndex: 1,
+					}},
+					Template: makeTemplate(
+						"publish",
+						`{{ .Name }}-publish:
+  {{- if .Dependencies }}
+  needs:
+	{{- range .Dependencies }}
+	- {{.}}
+	{{- end }}
+  {{- end }}
+  runs-on: ubuntu-latest
+  steps:
+	- uses: actions/checkout@v2
+	- name: Do something
+	  run: echo "Hello, world!"
+`,
+					),
+				},
+			},
 		},
 	},
+	golangProjectType,
 	{
 		Identifier: "terraformtarget",
 		Workflows: projects.WorkflowTypes{
