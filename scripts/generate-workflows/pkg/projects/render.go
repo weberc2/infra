@@ -22,7 +22,7 @@ func Render(outDir string, workflows Workflows) error {
 
 // RenderWorkflow renders a single workflow into a workflow YAML file in the
 // provided output directory.
-func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) error {
+func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []*Job) error {
 	filePath := filepath.Join(outDir, workflow.FileName())
 	return withFileCreate(
 		filePath,
@@ -42,7 +42,7 @@ func RenderWorkflow(outDir string, workflow WorkflowIdentifier, jobs []Job) erro
 				if _, err := file.WriteString("\n"); err != nil {
 					return err
 				}
-				if err := renderJob(file, &jobs[i]); err != nil {
+				if err := renderJob(file, jobs[i]); err != nil {
 					return fmt.Errorf(
 						"rendering job '%s' in workflow '%s': %w",
 						jobs[i].Name,
@@ -61,11 +61,13 @@ func renderJob(file *os.File, job *Job) error {
 	var writer strings.Builder
 
 	if err := job.Template.Execute(&writer, struct {
-		Name string
-		Path string
+		Name         string
+		Path         string
+		Dependencies []string
 	}{
-		Name: job.ProjectName,
-		Path: job.ProjectPath,
+		Name:         job.ProjectName,
+		Path:         job.ProjectPath,
+		Dependencies: job.Dependencies,
 	}); err != nil {
 		return err
 	}
