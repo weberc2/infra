@@ -80,6 +80,10 @@ type JobType struct {
 	// Name is suffixed onto all jobs of this job type.
 	Name string
 
+	// Dependencies defines the dependencies associated with a particular job
+	// type. Each entry maps a dependency project type from the parent
+	// `ProjectType.Dependencies` list to a job on that dependency
+	// `ProjectType`.
 	Dependencies []JobTypeDependency
 
 	// Template is the templates which will be rendered for

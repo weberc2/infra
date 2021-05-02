@@ -11,6 +11,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ProjectIdentifier is a (path, project-type) tuple which uniquely identifies
+// a project. Projects can't be identified by path alone because a single path
+// may house multiple projects.
 type ProjectIdentifier struct {
 	Path string
 	Type *ProjectType
