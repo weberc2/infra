@@ -126,6 +126,34 @@ var projectTypes = []projects.ProjectType{
 			"golang-source-project": &golangProjectType,
 		},
 		Workflows: projects.WorkflowTypes{
+			projects.WorkflowPullRequest: {
+				{
+					Name: "greet",
+					Dependencies: []projects.JobTypeDependency{{
+						Name:     "golang-source-project",
+						JobIndex: 0, // test
+					}, {
+						Name:     "golang-source-project",
+						JobIndex: 1,
+					}},
+					Template: makeTemplate(
+						"publish",
+						`{{ .Name }}-greet:
+  {{- if .Dependencies }}
+  needs:
+	{{- range .Dependencies }}
+	- {{.}}
+	{{- end }}
+  {{- end }}
+  runs-on: ubuntu-latest
+  steps:
+	- uses: actions/checkout@v2
+	- name: Do something
+	  run: echo "Hello, world!"
+`,
+					),
+				},
+			},
 			projects.WorkflowMerge: {
 				{
 					Name: "s3publish",

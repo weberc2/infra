@@ -55,6 +55,16 @@ jobs:
         # search GOPATH instead of the module at scripts/generate-workflows.
         run: (cd scripts/generate-workflows && $GOBIN/golint -set_exit_status .)
   
+  golanglambda-comments-service-greet:
+    needs:
+      - golang-comments-service-test
+      - golang-comments-service-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Do something
+        run: echo "Hello, world!"
+  
   terraformtarget-bootstrap-plan:
     runs-on: ubuntu-latest
     steps:
