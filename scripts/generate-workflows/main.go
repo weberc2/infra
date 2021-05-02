@@ -155,6 +155,7 @@ var projectTypes = []projects.ProjectType{
 							Run: `set -eo pipefail
 cd {{ .Path }}
 output="{{ .Name }}-$(git rev-parse HEAD)"
+echo "output=$output" >> $GITHUB_ENV
 go build -o "$output"`,
 						},
 						{
