@@ -149,7 +149,22 @@ var projectTypes = []projects.ProjectType{
 					RunsOn: "ubuntu-latest",
 					Steps: []projects.JobStep{
 						{Uses: "actions/checkout@v2"},
-						{Name: "Do something", Run: "echo \"Hello, world!\""},
+						{Uses: "actions/setup-go@v2"},
+						{
+							Name: "Build binary",
+							Run: `set -eo pipefail
+cd {{ .Path }}
+output="{{ .Name }}-$(git rev-parse HEAD)"
+go build -o "$output"`,
+						},
+						{
+							Name: "Publish to S3",
+							Env: map[string]string{
+								"AWS_ACCESS_KEY_ID":     "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}",
+								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
+							},
+							Run: `aws s3 cp "$output" "s3://weberc2-code-artifacts/$output"`,
+						},
 					},
 				},
 			},

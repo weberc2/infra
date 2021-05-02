@@ -52,8 +52,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Do something
-        run: echo "Hello, world!"
+      - uses: actions/setup-go@v2
+      - name: Build binary
+        run: |-
+          set -eo pipefail
+          cd apps/comments-service
+          output="golanglambda-comments-service-$(git rev-parse HEAD)"
+          go build -o "$output"
+      - name: Publish to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: aws s3 cp "$output" "s3://weberc2-code-artifacts/$output"
   terraformtarget-bootstrap-apply:
     runs-on: ubuntu-latest
     steps:
