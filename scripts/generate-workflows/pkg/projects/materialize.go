@@ -23,7 +23,7 @@ func (w *Workflow) MarshalYAML() (interface{}, error) {
 	for i, job := range w.Jobs {
 		node := &yaml.Node{}
 		if err := node.Encode(job); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("yaml-encoding job '%s': %w", job.Identifier, err)
 		}
 		jobMap[i] = field{job.Identifier, node}
 	}
@@ -107,13 +107,27 @@ func (j *Job) MarshalYAML() (interface{}, error) {
 		var sb strings.Builder
 		t, err := template.New("").Parse(step.Run)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"Parsing 'run' template of step '%s': %w",
+				step.Name,
+				err,
+			)
 		}
 		if err := t.Execute(
 			&sb,
-			struct{ Path string }{j.ProjectPath},
+			struct {
+				Name string
+				Path string
+			}{
+				j.ProjectName,
+				j.ProjectPath,
+			},
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"Executing 'run' template of step '%s': %w",
+				step.Name,
+				err,
+			)
 		}
 		step.Run = sb.String()
 		out.Steps[i] = step
