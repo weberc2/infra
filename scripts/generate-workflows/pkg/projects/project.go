@@ -5,6 +5,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"sort"
+
+	log "github.com/sirupsen/logrus"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Project represents a project in a repository. Each project has a type (see
@@ -60,46 +64,94 @@ func FindProjects(types []ProjectType, repoRoot string) ([]Project, error) {
 
 // findProjects is a recursive helper for `FindProjects`.
 func findProjects(types []ProjectType, root, dir string) ([]Project, error) {
+	parser := projectParser{types: types, repoRoot: root}
+	err := parser.parseProjectsRecursive(dir)
+	return parser.projects, err
+}
+
+type projectParser struct {
+	types    []ProjectType
+	projects []Project
+	repoRoot string
+}
+
+func (pp *projectParser) parseProjectsRecursive(dir string) error {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var projects []Project
 	for _, file := range files {
-		if file.IsDir() {
-			ps, err := findProjects(
-				types,
-				root,
-				filepath.Join(dir, file.Name()),
-			)
-			if err != nil {
-				return nil, err
+		if file.Name() == keyFileName {
+			log.Debugf("parsing projects directory %s", dir)
+			if err := pp.parseProjectsDirectory(dir); err != nil {
+				return fmt.Errorf("Parsing project(s) directory '%s': %s", dir, err)
 			}
 
-			projects = append(projects, ps...)
+			// for now, we will prohibit nested projects
 			continue
 		}
 
-		for i, projectType := range types {
-			if file.Name() == projectType.KeyFile {
-				path, err := filepath.Rel(root, dir)
-				if err != nil {
-					return nil, err
-				}
-
-				projects = append(
-					projects,
-					Project{
-						Type: &types[i],
-						Path: path,
-					},
-				)
+		if file.IsDir() {
+			filePath := filepath.Join(dir, file.Name())
+			if err := pp.parseProjectsRecursive(filePath); err != nil {
+				return err
 			}
 		}
 	}
 
-	return projects, nil
+	return nil
+}
+
+func (pp *projectParser) pushProject(p Project) {
+	pp.projects = append(pp.projects, p)
+}
+
+func (pp *projectParser) parseProjectsDirectory(dir string) error {
+	filePath := filepath.Join(dir, keyFileName)
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	var payload struct {
+		Projects []struct {
+			Type string `yaml:"type"`
+		} `yaml:"projects"`
+	}
+	if err := yaml.Unmarshal(data, &payload); err != nil {
+		return fmt.Errorf("Parsing YAML file '%s': %w", filePath, err)
+	}
+
+	path, err := filepath.Rel(pp.repoRoot, dir)
+	if err != nil {
+		return err
+	}
+
+	for _, project := range payload.Projects {
+		projectType, err := pp.findType(project.Type)
+		if err != nil {
+			return err
+		}
+		log.Debugf(
+			"adding project (path=%s, type=%s)",
+			path,
+			projectType.Identifier,
+		)
+		pp.pushProject(Project{
+			Type: projectType,
+			Path: path,
+		})
+	}
+	return nil
+}
+
+func (pp *projectParser) findType(identifier string) (*ProjectType, error) {
+	for i := range pp.types {
+		if pp.types[i].Identifier == identifier {
+			return &pp.types[i], nil
+		}
+	}
+	return nil, fmt.Errorf("project type '%s' not found", identifier)
 }
 
 // RenderProjectWorkflows collects projects in the repository, builds workflows,
@@ -120,3 +172,5 @@ func RenderProjectWorkflows(
 
 	return nil
 }
+
+const keyFileName = "projects.yaml"

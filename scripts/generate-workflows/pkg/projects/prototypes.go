@@ -88,13 +88,6 @@ type ProjectType struct {
 	// projects with the same name but different project types.
 	Identifier string
 
-	// KeyFile is the file to look for which will identify a directory as a
-	// project of this ProjectType. E.g., for a Go project it will be `go.mod`,
-	// for a Terraform project it will be `terraform.tf`, etc. It is possible
-	// though probably inadvisable for a given directory to yield projects of
-	// multiple types.
-	KeyFile string
-
 	// Workflows holds the `JobType`s associated with this project organized by
 	// the workflow for which they're intended.  Namely, the key for the array
 	// is intended to be a `WorkflowIdentifier` whose values are less than

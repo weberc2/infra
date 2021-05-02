@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,24 +25,36 @@ func findRepoRoot(dir string) (string, error) {
 }
 
 func main() {
+	if err := entrypoint(); err != nil {
+		chunks := strings.Split(err.Error(), ": ")
+		indent := ""
+		for _, chunk := range chunks {
+			color.Red("%s↪️ ️%s\n", indent, chunk)
+			indent += "  "
+		}
+		os.Exit(1)
+	}
+}
+
+func entrypoint() error {
 	// Create a temporary directory to represent the final
 	// `~/.github/workflows` directory. If all goes well, we'll do a rename at
 	// the end to atomically "promote" this temporary directory to become the
 	// official `~/.github/workflows` directory.
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		fatal("Creating temp dir: %v", err)
+		return fmt.Errorf("Creating temp dir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// Find the root of the repository
 	cwd, err := os.Getwd()
 	if err != nil {
-		fatal("Getting working directory: %v", err)
+		return fmt.Errorf("Getting working directory: %w", err)
 	}
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		fatal("Finding repo root: %v", err)
+		return fmt.Errorf("Finding repo root: %w", err)
 	}
 
 	dir := filepath.Join(repoRoot, ".github/workflows")
@@ -52,24 +64,27 @@ func main() {
 
 	// Build and render project workflow files
 	if err := projects.RenderProjectWorkflows(projectTypes, repoRoot, tmpDir); err != nil {
-		fatal("Render project workflows: %v", err)
+		return fmt.Errorf("Rendering project workflows: %w", err)
 	}
 	success("Staged project workflows")
 
 	// Render the static files
 	for fileName, contents := range staticFiles {
 		filePath := filepath.Join(tmpDir, fileName)
-		func() {
+		if err := func() error {
 			file, err := os.Create(filePath)
 			if err != nil {
-				fatal("Creating static file '%s': %v", filePath, err)
+				return fmt.Errorf("Creating static file '%s': %w", filePath, err)
 			}
 			defer file.Close()
 
 			if _, err := file.WriteString(contents); err != nil {
-				fatal("Writing to static file '%s': %v", filePath, err)
+				return fmt.Errorf("Writing to static file '%s': %w", filePath, err)
 			}
-		}()
+			return nil
+		}(); err != nil {
+			return err
+		}
 		success("Staged %s", fileName)
 	}
 
@@ -77,17 +92,17 @@ func main() {
 	if err := os.Rename(tmpDir, dir); err != nil {
 		if os.IsExist(err) {
 			if err := os.RemoveAll(dir); err != nil {
-				fatal("Removing dir '%s': %v", dir, err)
+				return fmt.Errorf("Removing dir '%s': %w", dir, err)
 			}
 			if err := os.Rename(tmpDir, dir); err != nil {
-				fatal("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+				return fmt.Errorf("Renaming '%s' to '%s': %w", tmpDir, dir, err)
 			}
 		} else {
-			fatal("Renaming '%s' to '%s': %v", tmpDir, dir, err)
+			return fmt.Errorf("Renaming '%s' to '%s': %w", tmpDir, dir, err)
 		}
 	}
-
 	success("Promoted staged files")
+	return nil
 }
 
 func makeTemplate(name, body string) *template.Template {
@@ -99,7 +114,6 @@ func makeTemplate(name, body string) *template.Template {
 var projectTypes = []projects.ProjectType{
 	{
 		Identifier: "golang",
-		KeyFile:    "go.mod",
 		Workflows: projects.WorkflowTypes{
 			projects.WorkflowPullRequest: {golangTestJobType, golangLintJobType},
 			projects.WorkflowMerge:       {golangTestJobType, golangLintJobType},
@@ -107,7 +121,6 @@ var projectTypes = []projects.ProjectType{
 	},
 	{
 		Identifier: "terraformtarget",
-		KeyFile:    "terraform.tf",
 		Workflows: projects.WorkflowTypes{
 			projects.WorkflowPullRequest: {
 				{
@@ -249,9 +262,5 @@ jobs:
 }
 
 func success(format string, v ...interface{}) {
-	log.Println(color.GreenString("✅ "+format, v...))
-}
-
-func fatal(format string, v ...interface{}) {
-	log.Fatal(color.RedString("❌ "+format, v...))
+	fmt.Printf("✅ "+format+"\n", v...)
 }
