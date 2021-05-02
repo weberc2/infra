@@ -28,7 +28,7 @@ jobs:
       - name: Lint
         # Evidently we can't 'go test apps/comments-service/...' or the go tool will
         # search GOPATH instead of the module at apps/comments-service.
-        run: (cd apps/comments-service && $GOBIN/golint -set_exit_status .)
+        run: (cd apps/comments-service && $GOBIN/golint -set_exit_status ./...)
   
   golang-generate-workflows-test:
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
       - name: Lint
         # Evidently we can't 'go test scripts/generate-workflows/...' or the go tool will
         # search GOPATH instead of the module at scripts/generate-workflows.
-        run: (cd scripts/generate-workflows && $GOBIN/golint -set_exit_status .)
+        run: (cd scripts/generate-workflows && $GOBIN/golint -set_exit_status ./...)
   
   golanglambda-comments-service-publish:
     needs:

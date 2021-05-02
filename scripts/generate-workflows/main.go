@@ -262,7 +262,7 @@ var golangLintJobType = projects.JobType{
     - name: Lint
       # Evidently we can't 'go test {{ .Path }}/...' or the go tool will
       # search GOPATH instead of the module at {{ .Path }}.
-      run: (cd {{ .Path }} && $GOBIN/golint -set_exit_status .)
+      run: (cd {{ .Path }} && $GOBIN/golint -set_exit_status ./...)
 `,
 	),
 }
