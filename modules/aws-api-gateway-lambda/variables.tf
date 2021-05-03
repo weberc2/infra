@@ -9,6 +9,5 @@ variable "lambda" {
 
 variable "tags" {
   type        = map(string)
-  description = "(Optional) The tags to apply to the resources. Defaults to `{}`."
-  default     = {}
+  description = "(Required) The tags to apply to the resources."
 }
