@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket = "weberc2-terraform-state"
-    key    = "targets/lambda"
+    key    = "targets/prd/lambda-support"
     region = "us-east-2"
   }
 }

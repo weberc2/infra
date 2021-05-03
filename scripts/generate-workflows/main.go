@@ -154,13 +154,15 @@ var projectTypes = []projects.ProjectType{
 							Name: "Build binary",
 							Run: `set -eo pipefail
 cd {{ .Path }}
-output="$PWD/{{ .Name }}-$(git rev-parse HEAD)"
+output="$PWD/{{ .Name }}"
 echo "output=$output" >> $GITHUB_ENV
 go build -o "$output"`,
 						},
 						{
 							Name: "Zip artifact",
-							Run:  "echo \"$output\" && zip \"${output}.zip\" \"$output\"",
+							Run: `filePath="${output}-$(git rev-parse HEAD)
+echo "filePath=$filePath" >> $GITHUB_ENV
+zip "${filePath}.zip" "$filePath"`,
 						},
 						{
 							Name: "Publish to S3",
@@ -169,7 +171,7 @@ go build -o "$output"`,
 								"AWS_SECRET_ACCESS_KEY": "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}",
 								"AWS_DEFAULT_REGION":    "us-east-2",
 							},
-							Run: `aws --debug s3 cp "${output}.zip" "s3://weberc2-inf-lambda-code-artifacts/$(basename $output).zip"`,
+							Run: `aws s3 cp "${filePath}.zip" "s3://weberc2-prd-lambda-support-code-artifacts/$(basename $filePath).zip"`,
 						},
 					},
 				},

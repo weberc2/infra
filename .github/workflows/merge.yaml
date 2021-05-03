@@ -57,17 +57,20 @@ jobs:
         run: |-
           set -eo pipefail
           cd apps/comments-service
-          output="$PWD/golanglambda-comments-service-$(git rev-parse HEAD)"
+          output="$PWD/golanglambda-comments-service"
           echo "output=$output" >> $GITHUB_ENV
           go build -o "$output"
       - name: Zip artifact
-        run: echo "$output" && zip "${output}.zip" "$output"
+        run: |-
+          filePath="${output}-$(git rev-parse HEAD)
+          echo "filePath=$filePath" >> $GITHUB_ENV
+          zip "${filePath}.zip" "$filePath"
       - name: Publish to S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: aws --debug s3 cp "${output}.zip" "s3://weberc2-inf-lambda-code-artifacts/$(basename $output).zip"
+        run: aws s3 cp "${filePath}.zip" "s3://weberc2-prd-lambda-support-code-artifacts/$(basename $filePath).zip"
   terraformtarget-bootstrap-apply:
     runs-on: ubuntu-latest
     steps:
@@ -84,7 +87,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap apply
-  terraformtarget-lambda-apply:
+  terraformtarget-lambda-support-apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -94,12 +97,12 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=targets/lambda init
+        run: terraform -chdir=targets/lambda-support init
       - name: Terraform apply
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=targets/lambda apply
+        run: terraform -chdir=targets/lambda-support apply
   terraformtarget-prd-environment-apply:
     runs-on: ubuntu-latest
     steps:
