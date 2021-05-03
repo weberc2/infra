@@ -1,4 +1,4 @@
 module "environment" {
-    source = "../../modules/environment"
-    name   = "prd"
+  source = "../../modules/environment"
+  name   = "prd"
 }
