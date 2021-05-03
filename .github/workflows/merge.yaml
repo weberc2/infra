@@ -58,9 +58,10 @@ jobs:
           set -eo pipefail
           cd apps/comments-service
           output="golanglambda-comments-service-$(git rev-parse HEAD)"
+          echo "output=$output" >> $GITHUB_ENV
           go build -o "$output"
       - name: Zip artifact
-        run: zip "${output}.zip" "$output"
+        run: echo "$output" && zip "${output}.zip" "$output"
       - name: Publish to S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}

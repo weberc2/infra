@@ -160,7 +160,7 @@ go build -o "$output"`,
 						},
 						{
 							Name: "Zip artifact",
-							Run:  "zip \"${output}.zip\" \"$output\"",
+							Run:  "echo \"$output\" && zip \"${output}.zip\" \"$output\"",
 						},
 						{
 							Name: "Publish to S3",
