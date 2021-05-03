@@ -57,7 +57,7 @@ jobs:
         run: |-
           set -eo pipefail
           cd apps/comments-service
-          output="golanglambda-comments-service-$(git rev-parse HEAD)"
+          output="$PWD/golanglambda-comments-service-$(git rev-parse HEAD)"
           echo "output=$output" >> $GITHUB_ENV
           go build -o "$output"
       - name: Zip artifact
@@ -65,8 +65,9 @@ jobs:
       - name: Publish to S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: aws s3 cp "${output}.zip" "s3://weberc2-inf-lambda-code-artifacts/${output}.zip"
+        run: aws --debug s3 cp "${output}.zip" "s3://weberc2-inf-lambda-code-artifacts/$(basename $output).zip"
   terraformtarget-bootstrap-apply:
     runs-on: ubuntu-latest
     steps:
