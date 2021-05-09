@@ -1,12 +1,12 @@
 on:
-    pull_request:
-        branches: [master]
+  pull_request:
+    branches: [master]
 jobs:
-    comments-service-tf-lint:
-        runs-on: ubuntu-latest
-        needs: []
-        steps:
-            - uses: actions/checkout@v2
-            - uses: hashicorp/setup-terraform@v1
-            - name: lint-terraform
-              run: terraform -chdir=targets/comments fmt -recursive -check
+  comments-service-tf-lint:
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+      - name: lint-terraform
+        run: terraform -chdir=targets/comments fmt -recursive -check
