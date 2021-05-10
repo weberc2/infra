@@ -1,7 +1,7 @@
 name: Pull Request
 on:
   pull_request:
-    branches: [master]
+    branches: [40-lambda-support]
 jobs:
   comments-service-tf-lint:
     runs-on: ubuntu-latest
