@@ -3,14 +3,15 @@ on:
   pull_request:
     branches: [40-lambda-support]
 jobs:
-  bootstrap-tf-lint:
+  bootstrap-tf:lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: hashicorp/setup-terraform@v1
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
       - name: lint-terraform
         run: terraform -chdir=targets/bootstrap fmt -recursive -check
-  bootstrap-tf-plan:
+  bootstrap-tf:plan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

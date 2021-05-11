@@ -42,7 +42,7 @@ func (pj *ProjectJob) Actionize(projectName ProjectName) Job {
 		needs[i] = pj.Needs[i].Actionize()
 	}
 	return Job{
-		Name:   JobName(fmt.Sprintf("%s-%s", projectName, pj.Name)),
+		Name:   JobName(fmt.Sprintf("%s:%s", projectName, pj.Name)),
 		RunsOn: pj.RunsOn,
 		Needs:  needs,
 		Steps:  pj.Steps,

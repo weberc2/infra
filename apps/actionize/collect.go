@@ -1,14 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	"cuelang.org/go/cue"
 )
 
-const projectsFileName = "projects.yaml"
+const projectsFileName = "projects.cue"
 
 func collectProjects(root string) ([]Project, error) {
 	pc := projectCollector{root: root}
@@ -59,10 +61,25 @@ func (pc *projectCollector) collect(dir string) error {
 		return err
 	}
 	var projects struct {
-		Projects []Project `yaml:"projects"`
+		Projects []Project `json:"projects" yaml:"projects"`
 	}
-	if err := yaml.Unmarshal(data, &projects); err != nil {
-		return err
+	// if err := yaml.Unmarshal(data, &projects); err != nil {
+	// 	return err
+	// }
+
+	var r cue.Runtime
+	instance, err := r.Compile(projectsFileName, data)
+	if err != nil {
+		return fmt.Errorf("compiling '%s': %w", filepath.Join(dir, projectsFileName), err)
+	}
+	data, err = json.MarshalIndent(instance.Value(), "", "    ")
+	if err != nil {
+		return fmt.Errorf("Marhsalling '%s' to JSON:", projectsFileName, err)
+	}
+	log.Printf("%s", data)
+	if err := json.Unmarshal(data, &projects); err != nil {
+
+		return fmt.Errorf("decoding '%s': %w", projectsFileName, err)
 	}
 
 	for i := range projects.Projects {

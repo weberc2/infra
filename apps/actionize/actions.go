@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -13,6 +14,14 @@ func (wfn *WorkflowName) UnmarshalYAML(value *yaml.Node) error {
 		return fmt.Errorf("wanted workflow name (string) found yaml node with kind = %v", value.Kind)
 	}
 	return wfn.FromString(value.Value)
+}
+
+func (wfn *WorkflowName) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("wanted workflow name (string): %w", err)
+	}
+	return wfn.FromString(s)
 }
 
 const (
@@ -70,10 +79,10 @@ func (wfn WorkflowName) TriggerString() string {
 }
 
 type Step struct {
-	Name string            `yaml:"name,omitempty"`
-	Env  map[string]string `yaml:"env,omitempty"`
-	Uses string            `yaml:"uses,omitempty"`
-	Run  string            `yaml:"run,omitempty"`
+	Name string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Env  map[string]string `json:"env,omitempty"  yaml:"env,omitempty"`
+	Uses string            `json:"uses,omitempty" yaml:"uses,omitempty"`
+	Run  string            `json:"run,omitempty"  yaml:"run,omitempty"`
 }
 
 type JobName string
