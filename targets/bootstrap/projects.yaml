@@ -1,0 +1,11 @@
+projects:
+  - name: bootstrap-tf
+    jobs:
+      pull-request:
+        - name: lint
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v2
+            - uses: hashicorp/setup-terraform@v1
+            - name: lint-terraform
+              run: terraform -chdir={{ .Path }} fmt -recursive -check
