@@ -33,7 +33,7 @@ func (pv *projectVisitor) actionize() []Workflow {
 }
 
 func (pji *ProjectJobIdentifier) Actionize() JobName {
-	return JobName(fmt.Sprintf("%s:%s", pji.Project, pji.Job))
+	return JobName(fmt.Sprintf("%s_%s", pji.Project, pji.Job))
 }
 
 func (pj *ProjectJob) Actionize(projectName ProjectName) Job {
@@ -42,7 +42,7 @@ func (pj *ProjectJob) Actionize(projectName ProjectName) Job {
 		needs[i] = pj.Needs[i].Actionize()
 	}
 	return Job{
-		Name:   JobName(fmt.Sprintf("%s:%s", projectName, pj.Name)),
+		Name:   JobName(fmt.Sprintf("%s_%s", projectName, pj.Name)),
 		RunsOn: pj.RunsOn,
 		Needs:  needs,
 		Steps:  pj.Steps,

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"cuelang.org/go/cue"
@@ -63,9 +62,6 @@ func (pc *projectCollector) collect(dir string) error {
 	var projects struct {
 		Projects []Project `json:"projects" yaml:"projects"`
 	}
-	// if err := yaml.Unmarshal(data, &projects); err != nil {
-	// 	return err
-	// }
 
 	var r cue.Runtime
 	instance, err := r.Compile(projectsFileName, data)
@@ -76,7 +72,6 @@ func (pc *projectCollector) collect(dir string) error {
 	if err != nil {
 		return fmt.Errorf("Marhsalling '%s' to JSON:", projectsFileName, err)
 	}
-	log.Printf("%s", data)
 	if err := json.Unmarshal(data, &projects); err != nil {
 
 		return fmt.Errorf("decoding '%s': %w", projectsFileName, err)
