@@ -13,7 +13,8 @@ projects:
           runs-on: ubuntu-latest
           steps:
             - uses: actions/checkout@v2
-            - uses: hashicorp/setup-terraform@v1
+            - name: Terraform setup
+              uses: hashicorp/setup-terraform@v1
             - name: Terraform init
               env:
                 AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
