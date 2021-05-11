@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/load"
 )
 
 const projectsFileName = "projects.cue"
@@ -55,7 +56,8 @@ func (pc *projectCollector) collectRecursive(dir string) error {
 }
 
 func (pc *projectCollector) collect(dir string) error {
-	data, err := ioutil.ReadFile(filepath.Join(dir, projectsFileName))
+	filePath := filepath.Join(dir, projectsFileName)
+	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
@@ -63,11 +65,25 @@ func (pc *projectCollector) collect(dir string) error {
 		Projects []Project `json:"projects" yaml:"projects"`
 	}
 
-	var r cue.Runtime
-	instance, err := r.Compile(projectsFileName, data)
-	if err != nil {
-		return fmt.Errorf("compiling '%s': %w", filepath.Join(dir, projectsFileName), err)
+	instances := cue.Build(load.Instances(
+		[]string{filePath},
+		&load.Config{
+			ModuleRoot: pc.root,
+			Package:    filepath.Base(dir),
+			Dir:        dir,
+		},
+	))
+	for _, instance := range instances {
+		if instance.Err != nil {
+			return fmt.Errorf("Building instance %s: %w", instance.DisplayName, instance.Err)
+		}
 	}
+
+	if len(instances) != 1 {
+		panic(fmt.Sprintf("Expected 1 Cue instance; found %d", len(instances)))
+	}
+
+	instance := instances[0]
 	data, err = json.MarshalIndent(instance.Value(), "", "    ")
 	if err != nil {
 		return fmt.Errorf("Marhsalling '%s' to JSON:", projectsFileName, err)

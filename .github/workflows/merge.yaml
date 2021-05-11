@@ -1,6 +1,6 @@
-name: Pull Request
+name: Merge
 on:
-  pull_request:
+  push:
     branches: [40-lambda-support]
 jobs:
   actionize test:
@@ -19,7 +19,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         run: terraform -chdir=targets/bootstrap fmt -recursive -check
-  bootstrap-tf plan:
+  bootstrap-tf apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -30,11 +30,11 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap init
-      - name: Terraform plan
+      - name: Terraform apply
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=targets/bootstrap plan
+        run: terraform -chdir=targets/bootstrap apply
   lambda-support fmt:
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +43,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         run: terraform -chdir=targets/lambda-support fmt -recursive -check
-  lambda-support plan:
+  lambda-support apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -54,8 +54,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/lambda-support init
-      - name: Terraform plan
+      - name: Terraform apply
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-        run: terraform -chdir=targets/lambda-support plan
+        run: terraform -chdir=targets/lambda-support apply
