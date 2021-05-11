@@ -22,4 +22,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap init
       - name: Terraform plan
-        run: terraform -chdir=targets/bootstrap fmt -recursive -check-service
+        run: terraform -chdir=targets/bootstrap plan
