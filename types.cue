@@ -84,13 +84,13 @@ package infra
 }
 
 #TerraformJob: #Job & {
-    #nom: "apply" | "plan"
+    #command: "apply" | "plan"
     {
-        name: #nom
+        name: #command
         #steps: [
             #TerraformSetupStep,
             #TerraformStep & { #name: "init" },
-            #TerraformStep & { #name: #nom },
+            #TerraformStep & { #name: #command },
         ]
     }
 }
@@ -100,11 +100,15 @@ package infra
     jobs: {
         merge: [
             #TerraformFmtJob,
-            #TerraformJob & { #nom: "apply" },
+            #TerraformJob & { #command: "apply" },
         ]
         "pull-request": [
             #TerraformFmtJob,
-            #TerraformJob & { #nom: "plan"} ,
+            #TerraformJob & { #command: "plan"} ,
         ]
     }
+}
+
+self: {
+    projects: [...#Project]
 }
