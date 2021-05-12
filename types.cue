@@ -156,6 +156,7 @@ package infra
 #AWSEnv: {
     AWS_ACCESS_KEY_ID: "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}"
     AWS_SECRET_ACCESS_KEY: "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}"
+    AWS_REGION: "us-east-2"
 }
 
 #TerraformStep: #Step & {
