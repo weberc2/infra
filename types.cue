@@ -81,15 +81,58 @@ package infra
         },
         {
             name: "Go lint"
+            // -set_exit_status is golint's dumb way of spelling `--check`
             run: "(cd {{ .Path }} && golint -set_exit_status ./...)"
         }
     ]
 }
 
+#GoBuild: #Job & {
+    name: "build"
+    #steps: [
+        #GoSetupStep,
+        {
+            name: "Go build"
+            run: """
+            (
+                cd {{ .Path }} &&
+                export OUTPUT={{ .Name }} &&
+                echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV &&
+                go build -o $OUTPUT
+            )
+            """
+        },
+        {
+            name: "Zip"
+            run: """
+            (
+                export OUTPUT_ZIP=$OUTPUT-$(git rev-parse HEAD).zip
+                echo "OUTPUT_ZIP=$OUTPUT_ZIP" >> $GITHUB_ENV
+                cd {{ .Path }} && zip $OUTPUT_ZIP $OUTPUT
+            )
+            """
+        },
+        {
+            name: "S3 Upload"
+            env: #AWSEnv
+            run: """
+            (
+                cd {{ .Path}} &&
+                aws s3 cp $OUTPUT_ZIP s3://weberc2-prd-lambda-support-code-artifacts/$OUTPUT_ZIP
+            )
+            """
+        }
+    ]
+}
+
 #GoProject: #Project & {
-    jobs: {
-        "pull-request": [ #GoTestJob, #GoLintJob ]
-        merge: [ #GoTestJob, #GoLintJob ]
+    #pullRequestJobs: [...#Job]
+    #mergeJobs: [...#Job]
+    {
+        jobs: {
+            "pull-request": [ #GoTestJob, #GoLintJob ] + #pullRequestJobs
+            merge: [ #GoTestJob, #GoLintJob ] + #mergeJobs
+        }
     }
 }
 
@@ -109,14 +152,16 @@ package infra
     ]
 }
 
+#AWSEnv: {
+    AWS_ACCESS_KEY_ID: "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}"
+    AWS_SECRET_ACCESS_KEY: "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}"
+}
+
 #TerraformStep: #Step & {
     #name: "init" | "plan" | "apply"
     {
         name: "Terraform \(#name)"
-        env: {
-            AWS_ACCESS_KEY_ID: "${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}"
-            AWS_SECRET_ACCESS_KEY: "${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}"
-        }
+        env: #AWSEnv
         run: "terraform -chdir={{ .Path }} \(#name)"
     }
 }
