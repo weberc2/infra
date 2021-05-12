@@ -28,7 +28,7 @@ jobs:
               go get golang.org/x/lint/golint
           )
       - name: Go lint
-        run: (cd apps/actionize && golint ./...)
+        run: (cd apps/actionize && golint -set_exit_status ./...)
   bootstrap-tf_fmt:
     runs-on: ubuntu-latest
     steps:

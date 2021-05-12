@@ -81,7 +81,7 @@ package infra
         },
         {
             name: "Go lint"
-            run: "(cd {{ .Path }} && golint ./...)"
+            run: "(cd {{ .Path }} && golint -set_exit_status ./...)"
         }
     ]
 }
