@@ -17,8 +17,15 @@ jobs:
       - uses: actions/checkout@v2
       - name: Go setup
         uses: actions/setup-go@v2
-      - name: Go lint
-        run: (cd apps/actionize && go get golang.org/x/lint/golint)
+      - name: Fetch golint
+        run: |-
+          (
+              cd apps/actionize &&
+              mkdir bin &&
+              export GOBIN=$PWD/bin &&
+              echo "GOBIN=$GOBIN" >> $GITHUB_ENV &&
+              go get golang.org/x/lint/golint
+          )
       - name: Go lint
         run: (cd apps/actionize && golint ./...)
   actionizecheck_check:

@@ -62,11 +62,22 @@ package infra
     _#args: "-v ./..."
 }
 
-#GoLintJob: #GoJob & {
-    #name: "lint"
-    #command: "go"
-    #args: "get golang.org/x/lint/golint"
-    _#steps: [
+#GoLintJob: #Job & {
+    name: "lint"
+    #steps: [
+        #GoSetupStep,
+        {
+            name: "Fetch golint"
+            run: """
+                (
+                    cd {{ .Path }} &&
+                    mkdir bin &&
+                    export GOBIN=$PWD/bin &&
+                    echo "GOBIN=$GOBIN" >> $GITHUB_ENV &&
+                    go get golang.org/x/lint/golint
+                )
+                """
+        },
         {
             name: "Go lint"
             run: "(cd {{ .Path }} && golint ./...)"
