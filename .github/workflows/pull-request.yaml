@@ -11,14 +11,24 @@ jobs:
         uses: actions/setup-go@v2
       - name: Go test
         run: (cd apps/actionize && go test -v ./...)
-  actionize-check_actionize-check:
+  actionize_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Go setup
+        uses: actions/setup-go@v2
+      - name: Go lint
+        run: (cd apps/actionize && go get golang.org/x/lint/golint)
+      - name: Go lint
+        run: (cd apps/actionize && golint ./...)
+  actionizecheck_check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - name: Go setup
         uses: actions/setup-go@v2
-      - name: actionize-check
+      - name: check
         run: |-
           set -eo pipefail
           cd ./apps/actionize

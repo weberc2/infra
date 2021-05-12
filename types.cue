@@ -29,29 +29,55 @@ package infra
 }
 
 #GoJob: #Job & {
+    #name: string
     #command: string
     #args: string
+    _#steps: [...#Step]
     {
-        name: #command
+        name: #name
         #steps: [
             #GoSetupStep,
             {
-                name: "Go \(#command)"
-                run: "(cd {{ .Path }} && go \(#command) \(#args))"
+                name: "Go \(#name)"
+                run: "(cd {{ .Path }} && \(#command) \(#args))"
             },
-        ]
+        ] + _#steps
     }
 }
 
-#GoTestJob: #GoJob & {
-    #command: "test"
-    #args: "-v ./..."
+#GoToolJob: {
+    _#command: string
+    _#args: string
+    _#steps_: [...#Step]
+    #GoJob & {
+        #name: _#command
+        #command: "go"
+        #args: "\(_#command) \(_#args)"
+        _#steps: _#steps_
+    }
+}
+
+#GoTestJob: #GoToolJob & {
+    _#command: "test"
+    _#args: "-v ./..."
+}
+
+#GoLintJob: #GoJob & {
+    #name: "lint"
+    #command: "go"
+    #args: "get golang.org/x/lint/golint"
+    _#steps: [
+        {
+            name: "Go lint"
+            run: "(cd {{ .Path }} && golint ./...)"
+        }
+    ]
 }
 
 #GoProject: #Project & {
     jobs: {
-        "pull-request": [ #GoTestJob ]
-        merge: [ #GoTestJob ]
+        "pull-request": [ #GoTestJob, #GoLintJob ]
+        merge: [ #GoTestJob, #GoLintJob ]
     }
 }
 
@@ -109,6 +135,6 @@ package infra
     }
 }
 
-self: {
+constraints: {
     projects: [...#Project]
 }
