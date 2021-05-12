@@ -2,14 +2,16 @@ import "github.com/weberc2/infra"
 
 infra.constraints
 
+#name: "comments-service"
+
 #goBuild: infra.#GoBuild & {
-    needs: ["comments-service:lint", "comments-service:test"]
+    needs: ["\(#name):lint", "\(#name):test"]
 }
 
 projects: [
     {
         #pullRequestJobs: [ #goBuild ]
         #mergeJobs: [ #goBuild ]
-        name: "comments-service"
+        name: #name
     } & infra.#GoProject
 ]
