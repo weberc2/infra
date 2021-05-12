@@ -3,7 +3,7 @@ on:
   push:
     branches: [40-lambda-support]
 jobs:
-  actionize test:
+  actionize_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -11,7 +11,7 @@ jobs:
         uses: actions/setup-go@v2
       - name: Go test
         run: (cd apps/actionize && go test -v ./...)
-  bootstrap-tf fmt:
+  bootstrap-tf_fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -19,7 +19,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         run: terraform -chdir=targets/bootstrap fmt -recursive -check
-  bootstrap-tf apply:
+  bootstrap-tf_apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap apply
-  lambda-support fmt:
+  lambda-support_fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -43,7 +43,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         run: terraform -chdir=targets/lambda-support fmt -recursive -check
-  lambda-support apply:
+  lambda-support_apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
