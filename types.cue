@@ -74,6 +74,7 @@ package infra
                     mkdir bin &&
                     export GOBIN=$PWD/bin &&
                     echo "GOBIN=$GOBIN" >> $GITHUB_ENV &&
+                    echo "PATH=$GOBIN:$PATH" >> $GITHUB_ENV &&
                     go get golang.org/x/lint/golint
                 )
                 """
