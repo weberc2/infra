@@ -41,18 +41,20 @@ func (pji *ProjectJobIdentifier) UnmarshalYAML(value *yaml.Node) error {
 
 func (pji *ProjectJobIdentifier) FromString(s string) error {
 	const errFormat = "job identifiers must be strings with form " +
-		"'{project}:{job}'; %s"
-	chunks := strings.SplitN(s, ":", 1)
-	if len(chunks) < 2 {
-		return fmt.Errorf(errFormat, "missing delimiter ':'")
+		"'{project}:{job}' (got '%s'); %s"
+	chunks := strings.SplitN(s, ":", 2)
+	if len(chunks) != 2 {
+		return fmt.Errorf(errFormat, s, "missing delimiter ':'")
 	} else if len(chunks[0]) < 1 {
 		return fmt.Errorf(
 			errFormat,
+			s,
 			"{project} must be at least 1 character",
 		)
 	} else if len(chunks[1]) < 1 {
 		return fmt.Errorf(
 			errFormat,
+			s,
 			"{job} must be at least 1 character",
 		)
 	}

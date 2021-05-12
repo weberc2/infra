@@ -13,6 +13,7 @@ package infra
     #steps: [...#Step]
     {
         name: string
+        needs: [...string]
         "runs-on": string | *"ubuntu-latest"
         steps: [#CheckoutStep] + #steps
     }
