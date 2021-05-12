@@ -8,7 +8,7 @@ infra.constraints
 
 projects: [
     {
-        #pullRequestJobs: [ infra.#GoBuild ]
+        #pullRequestJobs: [ #goBuild ]
         #mergeJobs: [ #goBuild ]
         name: "comments-service"
     } & infra.#GoProject

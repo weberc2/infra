@@ -57,6 +57,9 @@ jobs:
         run: (cd apps/comments-service && golint -set_exit_status ./...)
   comments-service_build:
     runs-on: ubuntu-latest
+    needs:
+      - comments-service_lint
+      - comments-service_test
     steps:
       - uses: actions/checkout@v2
       - name: Go setup
@@ -79,7 +82,7 @@ jobs:
       - name: S3 Upload
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: |-
           (
@@ -120,13 +123,13 @@ jobs:
       - name: Terraform init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap init
       - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/bootstrap plan
   lambda-support_fmt:
@@ -146,12 +149,12 @@ jobs:
       - name: Terraform init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/lambda-support init
       - name: Terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
         run: terraform -chdir=targets/lambda-support plan
