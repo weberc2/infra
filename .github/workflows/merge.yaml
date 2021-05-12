@@ -29,6 +29,62 @@ jobs:
           )
       - name: Go lint
         run: (cd apps/actionize && golint -set_exit_status ./...)
+  comments-service_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Go setup
+        uses: actions/setup-go@v2
+      - name: Go test
+        run: (cd apps/comments-service && go test -v ./...)
+  comments-service_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Go setup
+        uses: actions/setup-go@v2
+      - name: Fetch golint
+        run: |-
+          (
+              cd apps/comments-service &&
+              mkdir bin &&
+              export GOBIN=$PWD/bin &&
+              echo "GOBIN=$GOBIN" >> $GITHUB_ENV &&
+              echo "PATH=$GOBIN:$PATH" >> $GITHUB_ENV &&
+              go get golang.org/x/lint/golint
+          )
+      - name: Go lint
+        run: (cd apps/comments-service && golint -set_exit_status ./...)
+  comments-service_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Go setup
+        uses: actions/setup-go@v2
+      - name: Go build
+        run: |-
+          (
+              cd apps/comments-service &&
+              export OUTPUT=comments-service &&
+              echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV &&
+              go build -o $OUTPUT
+          )
+      - name: Zip
+        run: |-
+          (
+              export OUTPUT_ZIP=$OUTPUT-$(git rev-parse HEAD).zip
+              echo "OUTPUT_ZIP=$OUTPUT_ZIP" >> $GITHUB_ENV
+              cd apps/comments-service && zip $OUTPUT_ZIP $OUTPUT
+          )
+      - name: S3 Upload
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: |-
+          (
+              cd apps/comments-service &&
+              aws s3 cp $OUTPUT_ZIP s3://weberc2-prd-lambda-support-code-artifacts/$OUTPUT_ZIP
+          )
   bootstrap-tf_fmt:
     runs-on: ubuntu-latest
     steps:
