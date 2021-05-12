@@ -86,7 +86,7 @@ func (pc *projectCollector) collect(dir string) error {
 	instance := instances[0]
 	data, err = json.MarshalIndent(instance.Value(), "", "    ")
 	if err != nil {
-		return fmt.Errorf("Marhsalling '%s' to JSON:", projectsFileName, err)
+		return fmt.Errorf("Marhsalling '%s' to JSON: %w", projectsFileName, err)
 	}
 	if err := json.Unmarshal(data, &projects); err != nil {
 
